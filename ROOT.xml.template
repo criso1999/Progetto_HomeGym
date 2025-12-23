@@ -1,0 +1,37 @@
+// ...existing code...
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="" docBase="${project.basedir}/target/Progetto_HomeGym" reloadable="true">
+  <!-- Database resource (placeholders can be replaced by your build/CI) -->
+  <Resource name="jdbc/ProgettoDB" auth="Container" type="javax.sql.DataSource"
+            maxTotal="${db.maxTotal:20}" maxIdle="${db.maxIdle:10}" maxWaitMillis="10000"
+            username="${db.user:dbuser}" password="${db.pass:dbpass}"
+            driverClassName="${db.driver:com.mysql.cj.jdbc.Driver}"
+            url="${db.url:jdbc:mysql://localhost:3306/homegym?useSSL=false}" />
+
+  <!-- Application environment/config -->
+  <Environment name="app.env" value="${app.env:development}" type="java.lang.String"/>
+  <Parameter name="config.location" value="file:${catalina.base}/conf/progetto.properties" override="false"/>
+
+  <!-- Access log -->
+  <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+         prefix="ROOT_access_log" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+</Context>
+```// filepath: c:\Users\Utente\Desktop\project\Progetto_HomeGym\ROOT.xml.template
+// ...existing code...
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="" docBase="${project.basedir}/target/Progetto_HomeGym" reloadable="true">
+  <!-- Database resource (placeholders can be replaced by your build/CI) -->
+  <Resource name="jdbc/ProgettoDB" auth="Container" type="javax.sql.DataSource"
+            maxTotal="${db.maxTotal:20}" maxIdle="${db.maxIdle:10}" maxWaitMillis="10000"
+            username="${db.user:dbuser}" password="${db.pass:dbpass}"
+            driverClassName="${db.driver:com.mysql.cj.jdbc.Driver}"
+            url="${db.url:jdbc:mysql://localhost:3306/homegym?useSSL=false}" />
+
+  <!-- Application environment/config -->
+  <Environment name="app.env" value="${app.env:development}" type="java.lang.String"/>
+  <Parameter name="config.location" value="file:${catalina.base}/conf/progetto.properties" override="false"/>
+
+  <!-- Access log -->
+  <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+         prefix="ROOT_access_log" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+</Context>

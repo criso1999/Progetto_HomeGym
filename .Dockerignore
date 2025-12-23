@@ -1,0 +1,19 @@
+# Build Maven
+target/
+
+#git 
+.git.gitignore
+
+# IDE 
+.vscode/
+.idea/
+.ptoject
+.classpath
+.settings/
+
+# DS
+-DS_Store
+Thumbs.db
+
+# Log
+*.Log
