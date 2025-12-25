@@ -1,37 +1,20 @@
-// ...existing code...
 <?xml version="1.0" encoding="UTF-8"?>
-<Context path="" docBase="${project.basedir}/target/Progetto_HomeGym" reloadable="true">
-  <!-- Database resource (placeholders can be replaced by your build/CI) -->
-  <Resource name="jdbc/ProgettoDB" auth="Container" type="javax.sql.DataSource"
-            maxTotal="${db.maxTotal:20}" maxIdle="${db.maxIdle:10}" maxWaitMillis="10000"
-            username="${db.user:dbuser}" password="${db.pass:dbpass}"
-            driverClassName="${db.driver:com.mysql.cj.jdbc.Driver}"
-            url="${db.url:jdbc:mysql://localhost:3306/homegym?useSSL=false}" />
+<Context reloadable="false">
 
-  <!-- Application environment/config -->
-  <Environment name="app.env" value="${app.env:development}" type="java.lang.String"/>
-  <Parameter name="config.location" value="file:${catalina.base}/conf/progetto.properties" override="false"/>
+  <Resource
+      name="jdbc/ProgettoDB"
+      auth="Container"
+      type="javax.sql.DataSource"
+      factory="org.apache.tomcat.jdbc.pool.DataSourceFactory"
 
-  <!-- Access log -->
-  <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
-         prefix="ROOT_access_log" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
-</Context>
-```// filepath: c:\Users\Utente\Desktop\project\Progetto_HomeGym\ROOT.xml.template
-// ...existing code...
-<?xml version="1.0" encoding="UTF-8"?>
-<Context path="" docBase="${project.basedir}/target/Progetto_HomeGym" reloadable="true">
-  <!-- Database resource (placeholders can be replaced by your build/CI) -->
-  <Resource name="jdbc/ProgettoDB" auth="Container" type="javax.sql.DataSource"
-            maxTotal="${db.maxTotal:20}" maxIdle="${db.maxIdle:10}" maxWaitMillis="10000"
-            username="${db.user:dbuser}" password="${db.pass:dbpass}"
-            driverClassName="${db.driver:com.mysql.cj.jdbc.Driver}"
-            url="${db.url:jdbc:mysql://localhost:3306/homegym?useSSL=false}" />
+      driverClassName="com.mysql.cj.jdbc.Driver"
+      url="jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      username="${DB_USER}"
+      password="${DB_PASSWORD}"
 
-  <!-- Application environment/config -->
-  <Environment name="app.env" value="${app.env:development}" type="java.lang.String"/>
-  <Parameter name="config.location" value="file:${catalina.base}/conf/progetto.properties" override="false"/>
+      maxTotal="20"
+      maxIdle="10"
+      maxWaitMillis="10000"
+  />
 
-  <!-- Access log -->
-  <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
-         prefix="ROOT_access_log" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
 </Context>

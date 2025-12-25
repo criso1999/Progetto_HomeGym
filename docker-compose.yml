@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    image: homegym-app:latest
+    container_name: homegym-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - mongo
+    environment:
+      # Variabili usate dall'entrypoint.sh e dall'app (JNDI template)
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: homegym
+      DB_USER: root
+      DB_PASSWORD: example
+      DB_MAX_ACTIVE: 30
+      # Se usi Mongo nel codice, punta qui:
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DB: homegym_mongo
+    volumes:
+      - ./logs:/usr/local/tomcat/logs     # opzionale: per vedere i log Tomcat localmente
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: homegym-db
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: homegym
+      # MYSQL_USER / MYSQL_PASSWORD (opzionali - se vuoi creare un user non-root)
+      # MYSQL_USER: homegym_user
+      # MYSQL_PASSWORD: homegym_pwd
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - db_init:/docker-entrypoint-initdb.d   # se serve script di inizializzazione SQL
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6.0
+    container_name: homegym-mongo
+    environment:
+      MONGO_INITDB_DATABASE: homegym_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: homegym-adminer
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  mongo_data:
+  db_init:
