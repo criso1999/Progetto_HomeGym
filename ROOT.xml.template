@@ -8,7 +8,7 @@
       factory="org.apache.tomcat.jdbc.pool.DataSourceFactory"
 
       driverClassName="com.mysql.cj.jdbc.Driver"
-      url="jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      url="jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC"
       username="${DB_USER}"
       password="${DB_PASSWORD}"
 
