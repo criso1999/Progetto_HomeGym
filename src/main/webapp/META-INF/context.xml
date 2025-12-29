@@ -1,0 +1,10 @@
+<Resource name="jdbc/ProgettoDB"
+          auth="Container"
+          type="javax.sql.DataSource"
+          driverClassName="com.mysql.cj.jdbc.Driver"
+          url="jdbc:mysql://db:3306/homegym?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC"
+          username="root"
+          password="example"
+          maxTotal="20"
+          maxIdle="10"
+          maxWaitMillis="-1"/>

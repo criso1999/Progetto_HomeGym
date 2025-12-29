@@ -1,30 +1,7 @@
 version: "3.8"
 
 services:
-  app:
-    build: .
-    image: homegym-app:latest
-    container_name: homegym-app
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-      - mongo
-    environment:
-      # Variabili usate dall'entrypoint.sh e dall'app (JNDI template)
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: homegym
-      DB_USER: root
-      DB_PASSWORD: example
-      DB_MAX_ACTIVE: 30
-      # Se usi Mongo nel codice, punta qui:
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_DB: homegym_mongo
-    volumes:
-      - ./logs:/usr/local/tomcat/logs     # opzionale: per vedere i log Tomcat localmente
-    restart: unless-stopped
+
 
   db:
     image: mysql:8.0
@@ -62,6 +39,31 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+  app:
+    build: .
+    image: homegym-app:latest
+    container_name: homegym-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - mongo
+    environment:
+      # Variabili usate dall'entrypoint.sh e dall'app (JNDI template)
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: homegym
+      DB_USER: root
+      DB_PASSWORD: example
+      DB_MAX_ACTIVE: 30
+      # Se usi Mongo nel codice, punta qui:
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DB: homegym_mongo
+    volumes:
+      - ./logs:/usr/local/tomcat/logs     # opzionale: per vedere i log Tomcat localmente
+    restart: unless-stopped
+
 
   adminer:
     image: adminer:latest
