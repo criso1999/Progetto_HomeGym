@@ -1,36 +1,45 @@
-# --STAGE 1: build con Maven
-
-# Immagine base 
-FROM maven:3.9.8-eclipse-temurin-17 AS builder
+# ---------- STAGE 1: build with OpenJDK + apt-installed Maven ----------
+FROM eclipse-temurin:17-jdk AS builder
+LABEL stage=builder
 WORKDIR /build
-# copy file progetto
+
+# install maven (Debian-based)
+RUN apt-get update \
+ && apt-get install -y maven --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+
+# copy and resolve dependencies offline
 COPY pom.xml .
-# se hai file settings.xml o .m2, puoi copiarli qui
 RUN mvn -B dependency:go-offline
+
+# copy sources and build
 COPY src ./src
 RUN mvn -B package -DskipTests=true
 
-# --- STAGE 2: runtime Tomcat
-FROM  tomcat:9.0-jdk17-openjdk
+# ---------- STAGE 2: runtime Tomcat ----------
+FROM tomcat:9.0-jdk17-openjdk
 LABEL maintainer="cristianorellana@itstechtalentfactory.it"
-# Installazione envsubst (gettex) per templeting semplice
-USER root 
-RUN apt-get update && apt-get install -y gettext-base && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# pull la webapp di default (opzionale)
-RUN rm -rf /usr/local/tomcat/webapps*
+USER root
+# install envsubst (gettext) for simple templating
+RUN apt-get update \
+ && apt-get install -y gettext-base --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 
-# copiamo il war generato (assumo target/*.war)
+# clean default webapps
+RUN rm -rf /usr/local/tomcat/webapps/*
+
+# copy war from builder
 COPY --from=builder /build/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
-# Copiamo template e entrypoint
+# copy templates + entrypoint
 COPY ROOT.xml.template /usr/local/tomcat/conf/Catalina/localhost/ROOT.xml.template
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Esponiamo la porta tomcat
+
 EXPOSE 8080
 
-# start tramite script che genera il file ROOT.xml dal template
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["catalina.sh", "run"]
