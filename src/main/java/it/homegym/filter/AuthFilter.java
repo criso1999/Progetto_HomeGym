@@ -13,20 +13,51 @@ public class AuthFilter implements Filter {
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest r = (HttpServletRequest) req;
         HttpServletResponse s = (HttpServletResponse) res;
-        String path = r.getRequestURI().substring(r.getContextPath().length());
+        String ctx = r.getContextPath();
+        String path = r.getRequestURI().substring(ctx.length());
 
-        // permit public urls
-        if (path.startsWith("/css") || path.startsWith("/js") || path.equals("/login") || path.equals("/register") || path.equals("/jnditest") || path.equals("/test")) {
+        // pubbliche
+        if (path.startsWith("/css") || path.startsWith("/js") || path.startsWith("/images")
+                || path.equals("/") || path.equals("/index.jsp")
+                || path.equals("/login") || path.equals("/register")
+                || path.equals("/jnditest") || path.equals("/test")) {
             chain.doFilter(req, res);
             return;
         }
 
         HttpSession session = r.getSession(false);
-        if (session == null || session.getAttribute("user") == null) {
-            s.sendRedirect(r.getContextPath() + "/login");
+        Utente user = (session != null) ? (Utente) session.getAttribute("user") : null;
+
+        // se accesso non autenticato -> login
+        if (user == null) {
+            s.sendRedirect(ctx + "/login");
             return;
         }
 
+        String ruolo = user.getRuolo() != null ? user.getRuolo() : "CLIENTE";
+
+        // protezione /admin/* -> solo PROPRIETARIO
+        if (path.startsWith("/admin/") || path.equals("/admin") ) {
+            if (!"PROPRIETARIO".equals(ruolo)) {
+                // 403 oppure redirect a home con messaggio
+                s.sendError(HttpServletResponse.SC_FORBIDDEN, "Accesso negato: ruolo non autorizzato");
+                return;
+            }
+            chain.doFilter(req, res);
+            return;
+        }
+
+        // protezione /staff/* -> PERSONALE o PROPRIETARIO
+        if (path.startsWith("/staff/") || path.equals("/staff") ) {
+            if (!"PERSONALE".equals(ruolo) && !"PROPRIETARIO".equals(ruolo)) {
+                s.sendError(HttpServletResponse.SC_FORBIDDEN, "Accesso negato: ruolo non autorizzato");
+                return;
+            }
+            chain.doFilter(req, res);
+            return;
+        }
+
+        // default: utente autenticato può accedere
         chain.doFilter(req, res);
     }
 }

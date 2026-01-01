@@ -51,9 +51,24 @@ public class LoginServlet extends HttpServlet {
             HttpSession session = req.getSession(true);
             u.setPassword(null); // non memorizzare la password in sessione
             session.setAttribute("user", u);
-            resp.sendRedirect(req.getContextPath() + "/home");
-        } catch (Exception ex) {
-            throw new ServletException(ex);
-        }
-    }
-}
+            session.setMaxInactiveInterval(30 * 60); // 30 minuti
+            // dopo aver impostato session.setAttribute("user", u);
+            String ctx = req.getContextPath();
+            String redirect;
+            switch (u.getRuolo()) {
+                case "PROPRIETARIO":
+                    redirect = ctx + "/admin/home";
+                    break;
+                case "PERSONALE":
+                    redirect = ctx + "/staff/home";
+                    break;
+                default:
+                    redirect = ctx + "/home";
+            }
+            resp.sendRedirect(redirect);
+
+                    } catch (Exception ex) {
+                        throw new ServletException(ex);
+                    }
+                }
+            }
