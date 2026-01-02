@@ -2,7 +2,8 @@ package it.homegym.dao;
 
 import it.homegym.model.Utente;
 import it.homegym.util.ConnectionPool;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.sql.*;
 
 public class UtenteDAO {
@@ -11,6 +12,45 @@ public class UtenteDAO {
         // nessun lookup qui: ConnectionPool fa il lookup statico
         if (ConnectionPool.getDataSource() == null) {
             throw new IllegalStateException("DataSource non inizializzato");
+        }
+    }
+
+    public List<Utente> listAll() throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at FROM utente ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Utente u = new Utente();
+                u.setId(rs.getInt("id"));
+                u.setNome(rs.getString("nome"));
+                u.setCognome(rs.getString("cognome"));
+                u.setEmail(rs.getString("email"));
+                u.setPassword(rs.getString("password"));
+                u.setRuolo(rs.getString("ruolo"));
+                list.add(u);
+            }
+        }
+        return list;
+    }
+
+    public boolean updateRole(int id, String newRole) throws SQLException {
+        String sql = "UPDATE utente SET ruolo = ? WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, newRole);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean deleteById(int id) throws SQLException {
+        String sql = "DELETE FROM utente WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
         }
     }
 
