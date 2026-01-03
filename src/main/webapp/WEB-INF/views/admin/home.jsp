@@ -13,10 +13,11 @@
 <head><title>Admin - Home</title></head>
 <body>
 <h1>Admin Dashboard</h1>
-<p>Benvenuto <%= u.getNome() %> <%= u.getCognome() %> (<<%= u.getRuolo() %>>)</p>
+<p>Benvenuto <strong><%= u.getNome() %> <%= u.getCognome() %></strong> (<%= u.getRuolo() %>)</p>
 
 <ul>
   <li><a href="<%=request.getContextPath()%>/admin/users">Gestione utenti</a></li>
+  <li><a href="<%=request.getContextPath()%>/admin/payments">Gestione pagamenti</a></li>
   <li><a href="<%=request.getContextPath()%>/admin/stats">Statistiche</a></li>
   <li><a href="<%=request.getContextPath()%>/logout">Logout</a></li>
 </ul>

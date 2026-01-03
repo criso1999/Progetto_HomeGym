@@ -1,0 +1,2 @@
+<%-- Frammento: inserire nel <form> per proteggere da CSRF --%>
+<input type="hidden" name="_csrf" value="<%= session.getAttribute("csrfToken") %>" />

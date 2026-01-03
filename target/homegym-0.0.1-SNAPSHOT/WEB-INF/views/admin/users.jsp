@@ -48,6 +48,7 @@
         <td>
           <!-- Cambia ruolo -->
           <form class="inline" method="post" action="<%=request.getContextPath()%>/admin/users/action">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
             <input type="hidden" name="action" value="changeRole"/>
             <input type="hidden" name="id" value="${it.id}"/>
             <select name="role">
@@ -60,6 +61,7 @@
 
           <!-- Cancella utente -->
           <form class="inline" method="post" action="<%=request.getContextPath()%>/admin/users/action" onsubmit="return confirm('Confermi la cancellazione?');">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
             <input type="hidden" name="action" value="delete"/>
             <input type="hidden" name="id" value="${it.id}"/>
             <button type="submit">Elimina</button>
