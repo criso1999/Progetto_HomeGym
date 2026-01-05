@@ -54,6 +54,40 @@ public class UtenteDAO {
         }
     }
 
+    // inside UtenteDAO
+
+public Utente findById(int id) throws SQLException {
+    String sql = "SELECT id, nome, cognome, email, password, ruolo FROM utente WHERE id = ?";
+    try (Connection con = ConnectionPool.getDataSource().getConnection();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, id);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                Utente u = new Utente();
+                u.setId(rs.getInt("id"));
+                u.setNome(rs.getString("nome"));
+                u.setCognome(rs.getString("cognome"));
+                u.setEmail(rs.getString("email"));
+                u.setPassword(rs.getString("password"));
+                u.setRuolo(rs.getString("ruolo"));
+                return u;
+            }
+        }
+    }
+    return null;
+}
+
+    public boolean updatePassword(int id, String hashedPassword) throws SQLException {
+        String sql = "UPDATE utente SET password = ? WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, hashedPassword);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+
     public Utente findByEmail(String email) throws SQLException {
         String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at FROM utente WHERE email = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();

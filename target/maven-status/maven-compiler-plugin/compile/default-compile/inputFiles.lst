@@ -3,12 +3,15 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/AdminStatsServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/AdminUpdateRoleServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/AdminUsersServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/ForgotPasswordServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/HomeServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/JndiTestServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/LoginServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/LogoutServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/RegisterServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/ResetPasswordServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TestServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PasswordResetDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PaymentDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/UtenteDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/filter/AuthFilter.java
@@ -17,3 +20,4 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/model/Utente.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/security/CsrfUtil.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/util/ConnectionPool.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/util/MailUtil.java

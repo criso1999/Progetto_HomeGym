@@ -1,13 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ page import="it.homegym.model.Payment" %>
-
-<c:set var="payments" value="${requestScope.payments}" />
-<c:set var="page" value="${requestScope.page}" />
-<c:set var="pageSize" value="${requestScope.pageSize}" />
-<c:set var="totalPages" value="${requestScope.totalPages}" />
-<c:set var="totalCount" value="${requestScope.totalCount}" />
 
 <!doctype html>
 <html>
@@ -24,8 +17,14 @@
 </head>
 <body>
 <h1>Elenco pagamenti</h1>
+<c:if test="${not empty sessionScope.flash}">
+    <div class="notice" style="padding:8px;background:#e7f7e7;border:1px solid #bfe6bf;margin-bottom:12px;">
+        <c:out value="${sessionScope.flash}" />
+    </div>
+    <c:remove var="flash" scope="session" />
+</c:if>
 
-<p>Totale pagamenti: <strong>${totalCount}</strong></p>
+<p>Totale pagamenti: <strong><c:out value="${totalCount}" /></strong></p>
 
 <table>
     <thead>
@@ -59,6 +58,31 @@
                     <td><c:out value="${p.currency}" /></td>
                     <td><c:out value="${p.status}" /></td>
                     <td><c:out value="${p.createdAt}" /></td>
+
+                    <!-- Colonna azioni -->
+                    <td>
+                        <!-- Mark PAID -->
+                        <form method="post" action="${pageContext.request.contextPath}/admin/payments/action" style="display:inline;">
+                            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+                            <input type="hidden" name="action" value="updateStatus"/>
+                            <input type="hidden" name="id" value="${p.id}"/>
+                            <input type="hidden" name="status" value="PAID"/>
+                            <input type="hidden" name="page" value="${page}" />
+                            <input type="hidden" name="pageSize" value="${pageSize}" />
+                            <button type="submit" <c:if test="${p.status == 'PAID'}">disabled</c:if> title="Segna come PAID">Mark PAID</button>
+                        </form>
+
+                        <!-- Mark REFUNDED -->
+                        <form method="post" action="${pageContext.request.contextPath}/admin/payments/action" style="display:inline;">
+                            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+                            <input type="hidden" name="action" value="updateStatus"/>
+                            <input type="hidden" name="id" value="${p.id}"/>
+                            <input type="hidden" name="status" value="REFUNDED"/>
+                            <input type="hidden" name="page" value="${page}" />
+                            <input type="hidden" name="pageSize" value="${pageSize}" />
+                            <button type="submit" <c:if test="${p.status == 'REFUNDED'}">disabled</c:if> title="Segna come REFUNDED">Mark REFUNDED</button>
+                        </form>
+                    </td>
                 </tr>
             </c:forEach>
         </c:otherwise>
@@ -97,9 +121,9 @@
             <option value="50" <c:if test="${pageSize == 50}">selected</c:if>>50</option>
         </select>
     </label>
-    <button type="submit">Vai</button><br>
-    <p><a href="<%=request.getContextPath()%>/admin/home">← Admin Home</a></p>
+    <button type="submit">Vai</button>
 </form>
 
+<p><a href="${pageContext.request.contextPath}/admin/home">← Admin Home</a></p>
 </body>
 </html>

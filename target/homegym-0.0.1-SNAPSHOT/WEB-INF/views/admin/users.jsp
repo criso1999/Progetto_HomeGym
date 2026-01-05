@@ -1,20 +1,17 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="java.util.List"%>
-<%@ page import="it.homegym.model.Utente"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+
+<%-- Sicurezza lato JSP (in aggiunta al filtro) --%>
+<%@ page import="it.homegym.model.Utente" %>
 <%
-    // controllo di sicurezza lato JSP (in aggiunta al filtro)
     Utente u = (Utente) session.getAttribute("user");
     if (u == null) { response.sendRedirect(request.getContextPath() + "/login"); return; }
     if (!"PROPRIETARIO".equals(u.getRuolo())) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accesso negato");
         return;
     }
-
-    List<Utente> utenti = (List<Utente>) request.getAttribute("utenti");
-    if (utenti == null) {
-        utenti = java.util.Collections.emptyList();
-    }
 %>
+
 <!doctype html>
 <html>
 <head>
@@ -29,7 +26,9 @@
 </head>
 <body>
   <h2>Gestione utenti</h2>
-  <p>Benvenuto, <strong><%= u.getNome() %> <%= u.getCognome() %></strong> — <a href="<%=request.getContextPath()%>/admin/home">Admin Home</a> | <a href="<%=request.getContextPath()%>/logout">Logout</a></p>
+  <p>Benvenuto, <strong><%= u.getNome() %> <%= u.getCognome() %></strong> — 
+     <a href="${pageContext.request.contextPath}/admin/home">Admin Home</a> | 
+     <a href="${pageContext.request.contextPath}/logout">Logout</a></p>
 
   <table>
     <thead>
@@ -38,37 +37,35 @@
       </tr>
     </thead>
     <tbody>
-    <c:forEach var="it" items="${utenti}">
-      <tr>
-        <td>${it.id}</td>
-        <td>${it.nome}</td>
-        <td>${it.cognome}</td>
-        <td>${it.email}</td>
-        <td>${it.ruolo}</td>
-        <td>
-          <!-- Cambia ruolo -->
-          <form class="inline" method="post" action="<%=request.getContextPath()%>/admin/users/action">
-            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-            <input type="hidden" name="action" value="changeRole"/>
-            <input type="hidden" name="id" value="${it.id}"/>
-            <select name="role">
-              <option value="CLIENTE" ${it.ruolo == 'CLIENTE' ? 'selected' : ''}>CLIENTE</option>
-              <option value="PERSONALE" ${it.ruolo == 'PERSONALE' ? 'selected' : ''}>PERSONALE</option>
-              <option value="PROPRIETARIO" ${it.ruolo == 'PROPRIETARIO' ? 'selected' : ''}>PROPRIETARIO</option>
-            </select>
-            <button type="submit">Aggiorna</button>
-          </form>
+      <c:forEach var="it" items="${utenti}">
+        <tr>
+          <td><c:out value="${it.id}" /></td>
+          <td><c:out value="${it.nome}" /></td>
+          <td><c:out value="${it.cognome}" /></td>
+          <td><c:out value="${it.email}" /></td>
+          <td><c:out value="${it.ruolo}" /></td>
+          <td>
+            <form class="inline" method="post" action="${pageContext.request.contextPath}/admin/users/action">
+              <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+              <input type="hidden" name="action" value="changeRole"/>
+              <input type="hidden" name="id" value="${it.id}"/>
+              <select name="role">
+                <option value="CLIENTE"><c:if test="${it.ruolo == 'CLIENTE'}">selected</c:if>CLIENTE</option>
+                <option value="PERSONALE"><c:if test="${it.ruolo == 'PERSONALE'}">selected</c:if>PERSONALE</option>
+                <option value="PROPRIETARIO"><c:if test="${it.ruolo == 'PROPRIETARIO'}">selected</c:if>PROPRIETARIO</option>
+              </select>
+              <button type="submit">Aggiorna</button>
+            </form>
 
-          <!-- Cancella utente -->
-          <form class="inline" method="post" action="<%=request.getContextPath()%>/admin/users/action" onsubmit="return confirm('Confermi la cancellazione?');">
-            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-            <input type="hidden" name="action" value="delete"/>
-            <input type="hidden" name="id" value="${it.id}"/>
-            <button type="submit">Elimina</button>
-          </form>
-        </td>
-      </tr>
-    </c:forEach>
+            <form class="inline" method="post" action="${pageContext.request.contextPath}/admin/users/action" onsubmit="return confirm('Confermi la cancellazione?');">
+              <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+              <input type="hidden" name="action" value="delete"/>
+              <input type="hidden" name="id" value="${it.id}"/>
+              <button type="submit">Elimina</button>
+            </form>
+          </td>
+        </tr>
+      </c:forEach>
     </tbody>
   </table>
 </body>

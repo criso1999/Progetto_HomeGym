@@ -66,6 +66,14 @@
       <version>0.4</version>
     </dependency>
 
+    <!-- JavaMail (SMTP) -->
+    <dependency>
+      <groupId>com.sun.mail</groupId>
+      <artifactId>javax.mail</artifactId>
+      <version>1.6.2</version>
+    </dependency>
+
+
     <!-- SLF4J API + runtime binding (logback) -->
     <dependency>
       <groupId>org.slf4j</groupId>
