@@ -13,6 +13,8 @@
 
 <c:if test="${not empty error}">
   <div style="color:red">${error}</div>
+  <!-- link di reset password mostrato subito sotto l'errore -->
+  <p><a href="${pageContext.request.contextPath}/forgot">Hai dimenticato la password? Reimpostala qui</a></p>
 </c:if>
 
 <form method="post" action="${pageContext.request.contextPath}/login">

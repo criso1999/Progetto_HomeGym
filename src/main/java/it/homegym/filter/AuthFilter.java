@@ -20,7 +20,10 @@ public class AuthFilter implements Filter {
         if (path.startsWith("/css") || path.startsWith("/js") || path.startsWith("/images")
                 || path.equals("/") || path.equals("/index.jsp")
                 || path.equals("/login") || path.equals("/register")
-                || path.equals("/jnditest") || path.equals("/test") || path.equals("/logout")) {
+                || path.equals("/forgot")
+                || path.startsWith("/reset")
+                || path.equals("/jnditest") || path.equals("/test") || path.equals("/logout")) 
+                {
             chain.doFilter(req, res);
             return;
         }

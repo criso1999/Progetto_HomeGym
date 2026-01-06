@@ -1,4 +1,4 @@
-version: "3.8"
+
 
 services:
 
@@ -12,7 +12,7 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      # Monta qui la cartella locale ./db_init che contiene file .sql da eseguire all'init
+
       - ./db_init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -37,14 +37,7 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # SMTP di sviluppo (MailHog)
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: homegym-mailhog
-    ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
-    restart: unless-stopped
+
 
   app:
     build: .
@@ -55,7 +48,7 @@ services:
     depends_on:
       - db
       - mongo
-      - mailhog
+
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -64,16 +57,17 @@ services:
       DB_PASSWORD: example
       DB_MAX_ACTIVE: 30
 
-      # --- SMTP / Mail configuration (development) ---
-      # MailHog default: SMTP on host mailhog port 1025 (no auth)
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
-      SMTP_USER: ""         # lasci vuoto per MailHog
-      SMTP_PASSWORD: ""     # lasci vuoto per MailHog
-      MAIL_FROM: "HomeGym <no-reply@homegym.local>"
+      # --- SMTP / Mail configuration (Gmail) ---
+      # Preferibile: caricare questi valori da .env (non committare)
+      SMTP_HOST: "${SMTP_HOST:-smtp.gmail.com}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-your.account@gmail.com}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-YOUR_APP_PASSWORD_HERE}"
+      SMTP_SSL: "${SMTP_SSL:-false}"   # set to "true" if using implicit SSL on port 465
+      MAIL_FROM: "${MAIL_FROM:-HomeGym <no-reply@yourdomain.com>}"
 
       # URL base usato per costruire link (es. reset password)
-      APP_BASE_URL: "http://localhost:8080"
+      APP_BASE_URL: "${APP_BASE_URL:-http://localhost:8080}"
 
       # Se usi Mongo nel codice, punta qui:
       MONGO_HOST: mongo

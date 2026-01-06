@@ -14,19 +14,33 @@ public final class MailUtil {
         String user = System.getenv("SMTP_USER");
         String pass = System.getenv("SMTP_PASSWORD");
         String from = System.getenv("MAIL_FROM");
+        String sslEnv = System.getenv("SMTP_SSL"); // "true" per forzare SSL
 
         if (host == null || port == null || from == null) {
             throw new IllegalStateException("SMTP config mancante (SMTP_HOST/SMTP_PORT/MAIL_FROM).");
         }
 
+        boolean useAuth = (user != null && !user.isBlank());
+        boolean useSsl = "true".equalsIgnoreCase(sslEnv) || "465".equals(port);
+
         Properties props = new Properties();
-        props.put("mail.smtp.auth", (user != null && !user.isEmpty()) ? "true" : "false");
-        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.auth", String.valueOf(useAuth));
         props.put("mail.smtp.host", host);
         props.put("mail.smtp.port", port);
 
+        if (useSsl) {
+            // SSL (implicit) e.g. port 465
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.ssl.trust", host);
+        } else {
+            // STARTTLS (explicit) e.g. port 587
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.ssl.trust", host);
+        }
+
         Session session;
-        if (user != null && !user.isEmpty()) {
+        if (useAuth) {
             Authenticator auth = new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(user, pass != null ? pass : "");

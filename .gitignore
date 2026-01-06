@@ -1,1 +1,63 @@
+# Build output
+/target/
 /build/
+/*.war
+
+# Local environment / secrets
+.env
+
+# Tomcat logs (if you mount them)
+/logs/
+/usr-local-tomcat-logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+/.idea/
+/.vscode/
+*.iml
+*.ipr
+*.iws
+/.project
+/.classpath
+/.settings/
+
+# Maven wrapper / local repo
+/.mvn/
+.m2/
+
+# Node (if you ever add frontend)
+node_modules/
+
+# Docker
+docker-compose.override.yml
+docker-compose.*.local.yml
+.docker/
+
+# Generated files / temporary
+*.log
+*.tmp
+*.cache
+
+# Java / tooling
+*.class
+*.jar
+/*.war
+*.keystore
+*.jks
+
+# Coverage / reports
+/coverage/
+/*.lcov
+/jacoco.exec
+/site/
+
+# OS X specific
+.Spotlight-V100
+.Trashes
+
+# Misc
+*.swp
+*~ 
