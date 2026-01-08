@@ -62,6 +62,7 @@ public class ForgotPasswordServlet extends HttpServlet {
 
         // verifica reCAPTCHA (se configurata)
         String recaptchaResp = req.getParameter("g-recaptcha-response");
+        System.out.println("DEBUG: g-recaptcha-response = [" + recaptchaResp + "]");
         String secret = System.getenv("RECAPTCHA_SECRET");
         try {
             // se secret non impostato, RecaptchaVerifier.throw -> gestiamo come fallimento controllato

@@ -21,6 +21,11 @@ public final class RecaptchaVerifier {
      */
     public static boolean verify(String secret, String response, String remoteIp) throws Exception {
         if (secret == null || secret.isBlank()) {
+            String disabled = System.getenv("RECAPTCHA_DISABLED");
+            if ("true".equalsIgnoreCase(disabled)) {
+                System.out.println("reCAPTCHA disabled (dev). Skipping verification.");
+                return true;
+            }
             // in dev puoi scegliere di bypassare o considerare non valido; qui ritorniamo false
             throw new IllegalStateException("RECAPTCHA_SECRET non impostata");
         }

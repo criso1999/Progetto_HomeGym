@@ -13,15 +13,15 @@
   <div style="color:red">${error}</div>
 </c:if>
 
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <form method="post" action="${pageContext.request.contextPath}/forgot">
   <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
   Email: <input type="email" name="email" required /><br/>
+  <div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
   <button type="submit">Invia link di reset</button>
 </form>
 
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
- 
-<div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
+
  
 <p><a href="${pageContext.request.contextPath}/login">← Torna al login</a></p>
 </body>
