@@ -19,6 +19,10 @@
   <button type="submit">Invia link di reset</button>
 </form>
 
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+ 
+<div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
+ 
 <p><a href="${pageContext.request.contextPath}/login">← Torna al login</a></p>
 </body>
 </html>

@@ -73,7 +73,13 @@
       <version>1.6.2</version>
     </dependency>
 
-
+    <!--reCAPTCHA   -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.10.1</version>
+    </dependency>
+    
     <!-- SLF4J API + runtime binding (logback) -->
     <dependency>
       <groupId>org.slf4j</groupId>

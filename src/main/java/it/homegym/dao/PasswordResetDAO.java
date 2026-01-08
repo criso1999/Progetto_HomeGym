@@ -66,11 +66,12 @@ public class PasswordResetDAO {
     }
 
     // opzionale: pulizia vecchi token
-    public int deleteExpired() throws SQLException {
-        String sql = "DELETE FROM password_reset_token WHERE expires_at < NOW()";
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+   public int deleteExpired() throws Exception {
+    String sql = "DELETE FROM password_reset_token WHERE expires_at < NOW() OR used = 1";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
             return ps.executeUpdate();
         }
     }
+ 
 }
