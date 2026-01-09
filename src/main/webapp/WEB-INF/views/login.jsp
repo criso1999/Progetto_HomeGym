@@ -3,6 +3,7 @@
 <!doctype html>
 <html>
 <head><title>Login - HomeGym</title></head>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <body>
 <h2>Login</h2>
 
@@ -21,6 +22,7 @@
   <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
   Email: <input type="email" name="email" required /><br/>
   Password: <input type="password" name="password" required /><br/>
+  <div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
   <button type="submit">Entra</button>
 </form>
 <p>Non hai un account? <a href="${pageContext.request.contextPath}/register">Registrati</a></p>

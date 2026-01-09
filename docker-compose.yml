@@ -12,7 +12,6 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-
       - ./db_init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -37,8 +36,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-
-
   app:
     build: .
     image: homegym-app:latest
@@ -48,31 +45,37 @@ services:
     depends_on:
       - db
       - mongo
-
+    env_file:
+      - .env                # <-- carica qui le variabili sensibili/config
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: homegym
-      DB_USER: root
-      DB_PASSWORD: example
-      DB_MAX_ACTIVE: 30
+      # DB (possono venire anche dal .env)
+      DB_HOST: "${DB_HOST:-db}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_NAME: "${DB_NAME:-homegym}"
+      DB_USER: "${DB_USER:-root}"
+      DB_PASSWORD: "${DB_PASSWORD:-example}"
+      DB_MAX_ACTIVE: "${DB_MAX_ACTIVE:-30}"
 
-      # --- SMTP / Mail configuration (Gmail) ---
-      # Preferibile: caricare questi valori da .env (non committare)
+      # SMTP (Gmail / provider) - definisci in .env
       SMTP_HOST: "${SMTP_HOST:-smtp.gmail.com}"
       SMTP_PORT: "${SMTP_PORT:-587}"
-      SMTP_USER: "${SMTP_USER:-your.account@gmail.com}"
-      SMTP_PASSWORD: "${SMTP_PASSWORD:-YOUR_APP_PASSWORD_HERE}"
-      SMTP_SSL: "${SMTP_SSL:-false}"   # set to "true" if using implicit SSL on port 465
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_SSL: "${SMTP_SSL:-false}"
       MAIL_FROM: "${MAIL_FROM:-HomeGym <no-reply@yourdomain.com>}"
 
-      # URL base usato per costruire link (es. reset password)
+      # reCAPTCHA (sitekey/secret) - definisci in .env
+      RECAPTCHA_SITE_KEY: "${RECAPTCHA_SITE_KEY:-}"
+      RECAPTCHA_SECRET: "${RECAPTCHA_SECRET:-}"
+      RECAPTCHA_DISABLED: "${RECAPTCHA_DISABLED:-false}"
+
+      # URL base usato per link (es. reset password)
       APP_BASE_URL: "${APP_BASE_URL:-http://localhost:8080}"
 
-      # Se usi Mongo nel codice, punta qui:
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_DB: homegym_mongo
+      # Mongo
+      MONGO_HOST: "${MONGO_HOST:-mongo}"
+      MONGO_PORT: "${MONGO_PORT:-27017}"
+      MONGO_DB: "${MONGO_DB:-homegym_mongo}"
     volumes:
       - ./logs:/usr/local/tomcat/logs
     restart: unless-stopped

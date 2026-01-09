@@ -2,6 +2,7 @@
 <!doctype html>
 <html>
 <head><title>Registrazione</title></head>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <body>
 
 <h2>Registrazione HomeGym</h2>
@@ -16,6 +17,7 @@
     <input name="cognome" placeholder="Cognome" required><br>
     <input name="email" type="email" placeholder="Email" required><br>
     <input name="password" type="password" placeholder="Password" required><br>
+    <div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
     <button type="submit">Registrati</button>
 </form>
 
