@@ -1,39 +1,42 @@
 package it.homegym.controller;
 
+import it.homegym.dao.SessionDAO;
 import it.homegym.model.TrainingSession;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @WebServlet("/staff/sessions")
 public class StaffSessionsServlet extends HttpServlet {
 
+    private SessionDAO sessionDAO;
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        try {
+            sessionDAO = new SessionDAO();
+        } catch (Exception ex) {
+            throw new ServletException("Impossibile inizializzare SessionDAO", ex);
+        }
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // TODO: sostituire con chiamata al DB tramite SessionDAO
-        List<TrainingSession> sessions = new ArrayList<>();
+        try {
+            List<TrainingSession> sessions = sessionDAO.listAll();
+            req.setAttribute("sessions", sessions);
+        } catch (Exception e) {
+            // log e mostra messaggio di errore nella view
+            e.printStackTrace();
+            req.setAttribute("sessions", Collections.emptyList());
+            req.setAttribute("error", "Errore caricamento sessioni. Controlla i log.");
+        }
 
-        // esempio demo (comentare/rimuovere in produzione)
-        TrainingSession s1 = new TrainingSession();
-        s1.setId(1);
-        s1.setUserId(42);
-        s1.setUserName("Mario Rossi");
-        s1.setTrainer("Luca");
-        s1.setWhen(Timestamp.from(Instant.now().plusSeconds(3600)));
-        s1.setDurationMinutes(60);
-        s1.setNotes("Valutazione iniziale");
-        sessions.add(s1);
-
-        // imposta attributi per la JSP
-        req.setAttribute("sessions", sessions);
-
-        // forward alla view sotto /WEB-INF
         req.getRequestDispatcher("/WEB-INF/views/staff/sessions.jsp").forward(req, resp);
     }
 }
