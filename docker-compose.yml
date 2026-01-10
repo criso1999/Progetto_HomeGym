@@ -36,6 +36,8 @@ services:
       retries: 10
     restart: unless-stopped
 
+
+
   app:
     build: .
     image: homegym-app:latest

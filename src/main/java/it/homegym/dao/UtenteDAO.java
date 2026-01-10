@@ -35,6 +35,41 @@ public class UtenteDAO {
         return list;
     }
 
+    public List<Utente> listByRole(String ruolo) throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at FROM utente WHERE ruolo = ? ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, ruolo);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Utente u = new Utente();
+                    u.setId(rs.getInt("id"));
+                    u.setNome(rs.getString("nome"));
+                    u.setCognome(rs.getString("cognome"));
+                    u.setEmail(rs.getString("email"));
+                    u.setPassword(rs.getString("password"));
+                    u.setRuolo(rs.getString("ruolo"));
+                    list.add(u);
+                }
+            }
+        }
+        return list;
+    }
+
+    public boolean update(Utente u) throws SQLException {
+        String sql = "UPDATE utente SET nome = ?, cognome = ?, email = ?, ruolo = ? WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, u.getNome());
+            ps.setString(2, u.getCognome());
+            ps.setString(3, u.getEmail());
+            ps.setString(4, u.getRuolo());
+            ps.setInt(5, u.getId());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public boolean updateRole(int id, String newRole) throws SQLException {
         String sql = "UPDATE utente SET ruolo = ? WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
