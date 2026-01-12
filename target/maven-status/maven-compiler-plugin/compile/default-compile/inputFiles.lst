@@ -18,6 +18,7 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TestServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PasswordResetDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PaymentDAO.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/SessionDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/UtenteDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/filter/AuthFilter.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/filter/CspFilter.java

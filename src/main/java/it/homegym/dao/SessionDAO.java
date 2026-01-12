@@ -20,14 +20,24 @@ public class SessionDAO {
      * Usa LEFT JOIN su utente per ottenere nome/cognome se presente.
      */
     public List<TrainingSession> listAll() throws SQLException {
-        String sql = "SELECT s.id, s.user_id, s.trainer, s.scheduled_at, s.duration_minutes, s.notes, "
-                   + "u.nome AS u_nome, u.cognome AS u_cognome "
-                   + "FROM session s LEFT JOIN utente u ON s.user_id = u.id "
-                   + "ORDER BY s.scheduled_at DESC";
+        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, s.trainer, s.scheduled_at, s.duration_minutes, s.notes, s.created_at, s.updated_at "
+                + "FROM session s LEFT JOIN utente u ON s.user_id = u.id "
+                + "ORDER BY s.scheduled_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            return toList(rs);
+            PreparedStatement ps = c.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+            List<TrainingSession> list = new ArrayList<>();
+            while (rs.next()) {
+                TrainingSession s = mapRow(rs);
+                // costruisci userName se presente
+                String nome = rs.getString("u_nome");
+                String cognome = rs.getString("u_cognome");
+                if (nome != null || cognome != null) {
+                    s.setUserName(((nome!=null)?nome:"") + (cognome!=null ? " " + cognome : ""));
+                }
+                list.add(s);
+            }
+            return list;
         }
     }
 
@@ -102,23 +112,11 @@ public class SessionDAO {
         s.setId(rs.getInt("id"));
         int uid = rs.getInt("user_id");
         s.setUserId(rs.wasNull() ? null : uid);
-        String nome = rs.getString("u_nome");
-        String cognome = rs.getString("u_cognome");
-        if (nome != null || cognome != null) {
-            StringBuilder full = new StringBuilder();
-            if (nome != null && !nome.isBlank()) full.append(nome);
-            if (cognome != null && !cognome.isBlank()) {
-                if (full.length() > 0) full.append(" ");
-                full.append(cognome);
-            }
-            s.setUserName(full.length() > 0 ? full.toString() : null);
-        } else {
-            s.setUserName(null);
-        }
         s.setTrainer(rs.getString("trainer"));
         s.setWhen(rs.getTimestamp("scheduled_at"));
         s.setDurationMinutes(rs.getInt("duration_minutes"));
         s.setNotes(rs.getString("notes"));
         return s;
     }
+
 }
