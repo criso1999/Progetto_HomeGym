@@ -13,11 +13,16 @@ import java.time.format.DateTimeFormatter;
 
 @WebServlet("/staff/sessions/action")
 public class StaffSessionsActionServlet extends HttpServlet {
+
     private SessionDAO sessionDAO;
 
     @Override
     public void init() throws ServletException {
-        try { sessionDAO = new SessionDAO(); } catch (Exception e) { throw new ServletException(e); }
+        try {
+            sessionDAO = new SessionDAO();
+        } catch (Exception e) {
+            throw new ServletException("Impossibile inizializzare SessionDAO", e);
+        }
     }
 
     @Override
@@ -44,18 +49,20 @@ public class StaffSessionsActionServlet extends HttpServlet {
     private TrainingSession fromRequest(HttpServletRequest req) {
         TrainingSession s = new TrainingSession();
         String userId = req.getParameter("userId");
-        if (userId != null && !userId.isBlank()) s.setUserId(Integer.parseInt(userId));
+        if (userId != null && !userId.isBlank()) {
+            try { s.setUserId(Integer.parseInt(userId)); } catch (NumberFormatException ignored) {}
+        }
         s.setTrainer(req.getParameter("trainer"));
 
-        // expected input name "scheduled_at" as yyyy-MM-dd'T'HH:mm (datetime-local)
-        String scheduled = req.getParameter("scheduled_at");
+        String scheduled = req.getParameter("scheduled_at"); // expected yyyy-MM-dd'T'HH:mm
         if (scheduled != null && !scheduled.isBlank()) {
-            // convert to Timestamp
             LocalDateTime ldt = LocalDateTime.parse(scheduled, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             s.setWhen(Timestamp.valueOf(ldt));
         }
+
         String duration = req.getParameter("duration");
-        s.setDurationMinutes(duration != null && !duration.isBlank() ? Integer.parseInt(duration) : 60);
+        s.setDurationMinutes((duration != null && !duration.isBlank()) ? Integer.parseInt(duration) : 60);
+
         s.setNotes(req.getParameter("notes"));
         return s;
     }

@@ -7,6 +7,9 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.sql.Timestamp;
 
 @WebServlet({"/staff/sessions/new","/staff/sessions/edit","/staff/sessions/view"})
 public class StaffSessionFormServlet extends HttpServlet {
@@ -17,13 +20,21 @@ public class StaffSessionFormServlet extends HttpServlet {
         try { sessionDAO = new SessionDAO(); } catch (Exception e) { throw new ServletException(e); }
     }
 
-    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String id = req.getParameter("id");
-        if (id != null) {
+        if (id != null && !id.isBlank()) {
             try {
                 TrainingSession s = sessionDAO.findById(Integer.parseInt(id));
-                req.setAttribute("session", s);
+                if (s != null) {
+                    req.setAttribute("session", s);
+                    // prepara valore per input datetime-local (yyyy-MM-dd'T'HH:mm)
+                    Timestamp t = s.getWhen();
+                    if (t != null) {
+                        LocalDateTime ldt = t.toLocalDateTime();
+                        String formatted = ldt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+                        req.setAttribute("scheduledAtInput", formatted);
+                    }
+                }
             } catch (Exception e) {
                 throw new ServletException(e);
             }

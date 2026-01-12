@@ -16,24 +16,24 @@ public class SessionDAO {
     }
 
     /**
-     * Lista tutte le sessioni ordinata per scheduled_at desc.
-     * Usa LEFT JOIN su utente per ottenere nome/cognome se presente.
+     * Lista tutte le sessioni, con LEFT JOIN su utente per userName (se presente).
      */
     public List<TrainingSession> listAll() throws SQLException {
-        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, s.trainer, s.scheduled_at, s.duration_minutes, s.notes, s.created_at, s.updated_at "
-                + "FROM session s LEFT JOIN utente u ON s.user_id = u.id "
-                + "ORDER BY s.scheduled_at DESC";
+        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
+                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
+                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
+                     "ORDER BY s.scheduled_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             List<TrainingSession> list = new ArrayList<>();
             while (rs.next()) {
                 TrainingSession s = mapRow(rs);
-                // costruisci userName se presente
                 String nome = rs.getString("u_nome");
                 String cognome = rs.getString("u_cognome");
                 if (nome != null || cognome != null) {
-                    s.setUserName(((nome!=null)?nome:"") + (cognome!=null ? " " + cognome : ""));
+                    String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
+                    s.setUserName(full.trim());
                 }
                 list.add(s);
             }
@@ -41,15 +41,49 @@ public class SessionDAO {
         }
     }
 
+    public List<TrainingSession> listByTrainer(String trainer) throws SQLException {
+        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
+                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
+                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
+                     "WHERE s.trainer = ? ORDER BY s.scheduled_at DESC";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, trainer);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<TrainingSession> list = new ArrayList<>();
+                while (rs.next()) {
+                    TrainingSession s = mapRow(rs);
+                    String nome = rs.getString("u_nome");
+                    String cognome = rs.getString("u_cognome");
+                    if (nome != null || cognome != null) {
+                        String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
+                        s.setUserName(full.trim());
+                    }
+                    list.add(s);
+                }
+                return list;
+            }
+        }
+    }
+
     public TrainingSession findById(int id) throws SQLException {
-        String sql = "SELECT s.id, s.user_id, s.trainer, s.scheduled_at, s.duration_minutes, s.notes, "
-                   + "u.nome AS u_nome, u.cognome AS u_cognome "
-                   + "FROM session s LEFT JOIN utente u ON s.user_id = u.id WHERE s.id = ?";
+        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
+                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
+                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id WHERE s.id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapRow(rs);
+                if (rs.next()) {
+                    TrainingSession s = mapRow(rs);
+                    String nome = rs.getString("u_nome");
+                    String cognome = rs.getString("u_cognome");
+                    if (nome != null || cognome != null) {
+                        String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
+                        s.setUserName(full.trim());
+                    }
+                    return s;
+                }
             }
         }
         return null;
@@ -59,8 +93,7 @@ public class SessionDAO {
         String sql = "INSERT INTO session (user_id, trainer, scheduled_at, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            if (s.getUserId() != null) ps.setInt(1, s.getUserId());
-            else ps.setNull(1, Types.INTEGER);
+            if (s.getUserId() != null) ps.setInt(1, s.getUserId()); else ps.setNull(1, Types.INTEGER);
             ps.setString(2, s.getTrainer());
             ps.setTimestamp(3, s.getWhen());
             ps.setInt(4, s.getDurationMinutes());
@@ -78,8 +111,7 @@ public class SessionDAO {
         String sql = "UPDATE session SET user_id = ?, trainer = ?, scheduled_at = ?, duration_minutes = ?, notes = ? WHERE id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            if (s.getUserId() != null) ps.setInt(1, s.getUserId());
-            else ps.setNull(1, Types.INTEGER);
+            if (s.getUserId() != null) ps.setInt(1, s.getUserId()); else ps.setNull(1, Types.INTEGER);
             ps.setString(2, s.getTrainer());
             ps.setTimestamp(3, s.getWhen());
             ps.setInt(4, s.getDurationMinutes());
@@ -98,14 +130,6 @@ public class SessionDAO {
         }
     }
 
-    /* Helper methods */
-    private List<TrainingSession> toList(ResultSet rs) throws SQLException {
-        List<TrainingSession> list = new ArrayList<>();
-        while (rs.next()) {
-            list.add(mapRow(rs));
-        }
-        return list;
-    }
 
     private TrainingSession mapRow(ResultSet rs) throws SQLException {
         TrainingSession s = new TrainingSession();
@@ -118,5 +142,5 @@ public class SessionDAO {
         s.setNotes(rs.getString("notes"));
         return s;
     }
-
+    
 }

@@ -5,10 +5,10 @@ import java.sql.Timestamp;
 public class TrainingSession {
 
     private int id;
-    private Integer userId;        // nullable
-    private String userName;       // nome completo dell'utente (opzionale, popolato da JOIN)
+    private Integer userId;
+    private String userName; // optional: populated via JOIN
     private String trainer;
-    private Timestamp when;        // scheduled_at in DB
+    private Timestamp when; // scheduled_at
     private int durationMinutes;
     private String notes;
 
