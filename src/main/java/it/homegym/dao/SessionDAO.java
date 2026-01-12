@@ -26,18 +26,7 @@ public class SessionDAO {
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            List<TrainingSession> list = new ArrayList<>();
-            while (rs.next()) {
-                TrainingSession s = mapRow(rs);
-                String nome = rs.getString("u_nome");
-                String cognome = rs.getString("u_cognome");
-                if (nome != null || cognome != null) {
-                    String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
-                    s.setUserName(full.trim());
-                }
-                list.add(s);
-            }
-            return list;
+            return toListWithUser(rs);
         }
     }
 
@@ -50,18 +39,21 @@ public class SessionDAO {
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, trainer);
             try (ResultSet rs = ps.executeQuery()) {
-                List<TrainingSession> list = new ArrayList<>();
-                while (rs.next()) {
-                    TrainingSession s = mapRow(rs);
-                    String nome = rs.getString("u_nome");
-                    String cognome = rs.getString("u_cognome");
-                    if (nome != null || cognome != null) {
-                        String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
-                        s.setUserName(full.trim());
-                    }
-                    list.add(s);
-                }
-                return list;
+                return toListWithUser(rs);
+            }
+        }
+    }
+
+    public List<TrainingSession> listByUserId(int userId) throws SQLException {
+        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
+                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
+                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
+                     "WHERE s.user_id = ? ORDER BY s.scheduled_at DESC";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return toListWithUser(rs);
             }
         }
     }
@@ -130,6 +122,22 @@ public class SessionDAO {
         }
     }
 
+    /* ----- helper methods ----- */
+
+    private List<TrainingSession> toListWithUser(ResultSet rs) throws SQLException {
+        List<TrainingSession> list = new ArrayList<>();
+        while (rs.next()) {
+            TrainingSession s = mapRow(rs);
+            String nome = rs.getString("u_nome");
+            String cognome = rs.getString("u_cognome");
+            if (nome != null || cognome != null) {
+                String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
+                s.setUserName(full.trim());
+            }
+            list.add(s);
+        }
+        return list;
+    }
 
     private TrainingSession mapRow(ResultSet rs) throws SQLException {
         TrainingSession s = new TrainingSession();
@@ -142,5 +150,4 @@ public class SessionDAO {
         s.setNotes(rs.getString("notes"));
         return s;
     }
-    
 }

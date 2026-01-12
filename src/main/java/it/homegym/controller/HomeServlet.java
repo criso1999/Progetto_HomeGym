@@ -7,20 +7,40 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
 
-@WebServlet({"/home", "/admin/home", "/staff/home"})
+@WebServlet("/home")
 public class HomeServlet extends HttpServlet {
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        Utente u = (Utente) req.getSession().getAttribute("user");
-        if (u == null) { resp.sendRedirect(req.getContextPath() + "/login"); return; }
+        HttpSession session = req.getSession(false);
+        String ctx = req.getContextPath();
 
-        String ruolo = u.getRuolo();
-        if ("PERSONALE".equals(ruolo)) {
-            req.getRequestDispatcher("/WEB-INF/views/staff/home.jsp").forward(req, resp);
-        } else if ("PROPRIETARIO".equals(ruolo)) {
-            req.getRequestDispatcher("/WEB-INF/views/admin/home.jsp").forward(req, resp);
-        } else {
-            req.getRequestDispatcher("/WEB-INF/views/home.jsp").forward(req, resp);
+        if (session == null) {
+            resp.sendRedirect(ctx + "/login");
+            return;
         }
+
+        Utente u = (Utente) session.getAttribute("user");
+        if (u == null) {
+            resp.sendRedirect(ctx + "/login");
+            return;
+        }
+
+        String ruolo = u.getRuolo() != null ? u.getRuolo().trim().toUpperCase() : "CLIENTE";
+
+        String redirect;
+        switch (ruolo) {
+            case "PROPRIETARIO":
+                redirect = ctx + "/admin/home";
+                break;
+            case "PERSONALE":
+                redirect = ctx + "/staff/home";
+                break;
+            default:
+                // cliente o ruolo non riconosciuto -> area client
+                redirect = ctx + "/client/home";
+        }
+
+        resp.sendRedirect(redirect);
     }
 }

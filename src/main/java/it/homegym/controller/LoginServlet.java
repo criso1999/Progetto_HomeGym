@@ -92,7 +92,21 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("user", u);
             session.setMaxInactiveInterval(30 * 60);
 
-            resp.sendRedirect(req.getContextPath() + "/home");
+            // Redirect in base al ruolo
+            String ctx = req.getContextPath();
+            String ruolo = u.getRuolo() != null ? u.getRuolo() : "CLIENTE";
+            String redirect;
+            switch (ruolo) {
+                case "PROPRIETARIO":
+                    redirect = ctx + "/admin/home";
+                    break;
+                case "PERSONALE":
+                    redirect = ctx + "/staff/home";
+                    break;
+                default:
+                    redirect = ctx + "/client/home";
+            }
+            resp.sendRedirect(redirect);
         } catch (Exception ex) {
             throw new ServletException(ex);
         }
