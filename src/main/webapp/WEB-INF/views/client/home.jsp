@@ -9,7 +9,9 @@
 <ul>
   <li><a href="${pageContext.request.contextPath}/client/profile">Il mio profilo</a></li>
   <li><a href="${pageContext.request.contextPath}/client/sessions">Le mie sessioni</a></li>
+  <li><a href="${pageContext.request.contextPath}/posts/create">Create Post</a></li>
   <li><a href="${pageContext.request.contextPath}/logout">Logout</a></li>
 </ul>
+
 </body>
 </html>

@@ -4,15 +4,23 @@ import it.homegym.dao.UtenteDAO;
 import it.homegym.model.Utente;
 import org.mindrot.jbcrypt.BCrypt;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebServlet("/client/profile")
 public class ClientProfileServlet extends HttpServlet {
 
     private UtenteDAO utenteDAO;
+    private MongoCollection<Document> posts;
 
     @Override
     public void init() throws ServletException {
@@ -21,6 +29,13 @@ public class ClientProfileServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException(e);
         }
+        String host = System.getenv("MONGO_HOST");
+        String port = System.getenv("MONGO_PORT");
+        String dbName = System.getenv("MONGO_DB");
+
+        MongoClient client = MongoClients.create("mongodb://" + host + ":" + port);
+        MongoDatabase db = client.getDatabase(dbName);
+        posts = db.getCollection("posts");
     }
 
     private HttpSession requireSession(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -42,7 +57,12 @@ public class ClientProfileServlet extends HttpServlet {
             Utente fresh = utenteDAO.findById(u.getId());
             if (fresh != null) u = fresh;
         } catch (Exception ignored) {}
+        List<Document> userPosts = posts
+                .find(new Document("userId", u.getId()))
+                .sort(new Document("createdAt", -1))
+                .into(new ArrayList<>());
         req.setAttribute("user", u);
+         req.setAttribute("posts", userPosts);
         req.getRequestDispatcher("/WEB-INF/views/client/profile.jsp").forward(req, resp);
     }
 

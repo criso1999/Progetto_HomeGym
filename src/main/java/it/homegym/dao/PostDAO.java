@@ -3,6 +3,7 @@ package it.homegym.dao;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import it.homegym.util.MongoUtil;
 import org.bson.Document;
@@ -18,9 +19,38 @@ public class PostDAO {
 
     public PostDAO() {
         col = MongoUtil.getDatabase().getCollection("posts");
-        // ensure index (idempotent)
-        col.createIndex(Indexes.descending("createdAt"));
-        col.createIndex(Indexes.ascending("userId"));
+        ensureIndexes();
+    }
+
+    /**
+     * Garantisce indici idempotenti senza errori di conflitto nome
+     */
+    private void ensureIndexes() {
+        List<Document> existing = col.listIndexes().into(new ArrayList<>());
+
+        boolean createdAtExists = existing.stream().anyMatch(idx -> {
+            Document key = (Document) idx.get("key");
+            return key != null && key.containsKey("createdAt");
+        });
+
+        if (!createdAtExists) {
+            col.createIndex(
+                    Indexes.descending("createdAt"),
+                    new IndexOptions().name("idx_posts_createdAt")
+            );
+        }
+
+        boolean userIdExists = existing.stream().anyMatch(idx -> {
+            Document key = (Document) idx.get("key");
+            return key != null && key.containsKey("userId");
+        });
+
+        if (!userIdExists) {
+            col.createIndex(
+                    Indexes.ascending("userId"),
+                    new IndexOptions().name("idx_posts_userId")
+            );
+        }
     }
 
     public ObjectId createPost(int userId, String userName, String content, List<Document> medias) {
@@ -34,16 +64,19 @@ public class PostDAO {
                 .append("createdAt", Date.from(Instant.now()))
                 .append("updatedAt", Date.from(Instant.now()))
                 .append("visibility", "PUBLIC");
+
         col.insertOne(d);
         return d.getObjectId("_id");
     }
 
     public List<Document> listFeed(int page, int pageSize) {
         int skip = (page - 1) * pageSize;
+
         FindIterable<Document> it = col.find()
                 .sort(Indexes.descending("createdAt"))
                 .skip(skip)
                 .limit(pageSize);
+
         List<Document> out = new ArrayList<>();
         for (Document d : it) out.add(d);
         return out;
@@ -59,9 +92,12 @@ public class PostDAO {
                 .append("userName", userName)
                 .append("text", text)
                 .append("createdAt", Date.from(Instant.now()));
-        col.updateOne(Filters.eq("_id", postId),
+
+        col.updateOne(
+                Filters.eq("_id", postId),
                 new Document("$push", new Document("comments", comment))
-                        .append("$set", new Document("updatedAt", Date.from(Instant.now()))));
+                        .append("$set", new Document("updatedAt", Date.from(Instant.now())))
+        );
     }
 
     public void addTrainerEvaluation(ObjectId postId, int trainerId, String trainerName, String note, int score) {
@@ -71,14 +107,15 @@ public class PostDAO {
                 .append("note", note)
                 .append("score", score)
                 .append("createdAt", Date.from(Instant.now()));
-        col.updateOne(Filters.eq("_id", postId),
+
+        col.updateOne(
+                Filters.eq("_id", postId),
                 new Document("$push", new Document("trainerEvaluations", ev))
-                        .append("$set", new Document("updatedAt", Date.from(Instant.now()))));
+                        .append("$set", new Document("updatedAt", Date.from(Instant.now())))
+        );
     }
 
     public boolean deletePost(ObjectId id) {
         return col.deleteOne(Filters.eq("_id", id)).getDeletedCount() > 0;
     }
-
-    // altri metodi: update content, pagination counts, search...
 }

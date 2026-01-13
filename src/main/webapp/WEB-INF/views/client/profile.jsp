@@ -18,6 +18,34 @@
   Conferma password: <input name="password2" type="password" /><br/>
   <button type="submit">Salva</button>
 </form>
+<h2>I miei Post</h2>
+
+<p>
+  <a href="${pageContext.request.contextPath}/posts/create">
+    ➕ Crea nuovo post
+  </a>
+</p>
+
+<c:choose>
+  <c:when test="${empty posts}">
+    <p>Non hai ancora pubblicato nessun post.</p>
+  </c:when>
+
+  <c:otherwise>
+    <ul>
+      <c:forEach var="p" items="${posts}">
+        <li>
+          <strong><c:out value="${p.title}"/></strong>
+          ( <c:out value="${p.createdAt}"/> )
+          —
+          <a href="${pageContext.request.contextPath}/posts/view?id=${p._id}">
+            Apri
+          </a>
+        </li>
+      </c:forEach>
+    </ul>
+  </c:otherwise>
+</c:choose>
 
 <p><a href="${pageContext.request.contextPath}/client/home">← Torna</a></p>
 </body>
