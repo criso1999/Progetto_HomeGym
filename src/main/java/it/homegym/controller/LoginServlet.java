@@ -88,6 +88,10 @@ public class LoginServlet extends HttpServlet {
             }
 
             HttpSession session = req.getSession(true);
+            // prevenzione session fixation
+            try {
+                req.changeSessionId();
+            } catch (IllegalStateException ignored) { /* Servlet container dovesse non supportare */ }
             u.setPassword(null);
             session.setAttribute("user", u);
             session.setMaxInactiveInterval(30 * 60);

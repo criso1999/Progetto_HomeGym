@@ -1,12 +1,12 @@
 it/homegym/dao/UtenteDAO.class
+it/homegym/controller/JndiTestServlet.class
+it/homegym/controller/TestServlet.class
+it/homegym/filter/AuthFilter.class
+it/homegym/controller/AdminUpdateRoleServlet.class
 it/homegym/controller/LoginServlet.class
 it/homegym/controller/LogoutServlet.class
-it/homegym/controller/JndiTestServlet.class
 it/homegym/util/ConnectionPool.class
-it/homegym/controller/TestServlet.class
 it/homegym/controller/HomeServlet.class
-it/homegym/filter/AuthFilter.class
 it/homegym/model/Utente.class
-it/homegym/controller/AdminUpdateRoleServlet.class
 it/homegym/controller/RegisterServlet.class
 it/homegym/controller/AdminUsersServlet.class
