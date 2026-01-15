@@ -18,6 +18,7 @@
 <ul>
   <li><a href="<%=request.getContextPath()%>/admin/users">Gestione utenti</a></li>
   <li><a href="<%=request.getContextPath()%>/admin/payments">Gestione pagamenti</a></li>
+  <li><a href="<%=request.getContextPath()%>/staff/community">Community</a></li>
   <li><a href="<%=request.getContextPath()%>/admin/stats">Statistiche</a></li>
   <li><a href="<%=request.getContextPath()%>/logout">Logout</a></li>
 </ul>

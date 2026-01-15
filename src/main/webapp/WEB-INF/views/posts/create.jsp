@@ -10,7 +10,24 @@
     <label>Media (image/video) <input type="file" name="media" multiple /></label><br/>
     <button type="submit">Post</button>
   </form>
-  <p><a href="${pageContext.request.contextPath}/client/home">← Torna</a></p>
-  <p><a href="${pageContext.request.contextPath}/posts">← Feed</a></p>
+  <c:if test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
+    <p><a href="${pageContext.request.contextPath}/admin/home">← Torna</a></p>
+  </c:if>
+
+  <c:if test="${sessionScope.user.ruolo == 'PERSONALE'}">
+    <p><a href="${pageContext.request.contextPath}/staff/home">← Torna</a></p>
+  </c:if>
+
+  <c:if test="${sessionScope.user.ruolo == 'CLIENTE'}">
+    <p><a href="${pageContext.request.contextPath}/client/home">← Torna</a></p>
+  </c:if>
+
+  <c:if test="${sessionScope.user.ruolo == 'CLIENTE'}">
+    <p><a href="${pageContext.request.contextPath}/posts">← Feed</a></p>
+  </c:if>
+  
+  <c:if test="${sessionScope.user.ruolo == 'PROPRIETARIO' || sessionScope.user.ruolo == 'PERSONALE'}">
+    <p><a href="${pageContext.request.contextPath}/staff/community">← Feed</a></p>
+  </c:if>
 </body>
 </html>

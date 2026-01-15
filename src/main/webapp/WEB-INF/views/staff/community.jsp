@@ -7,75 +7,121 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Community - Trainer Feed</title>
+  <title>Community Feed</title>
   <style>
     .post { border:1px solid #ddd; padding:12px; margin:12px 0; }
     .media img, .media video { max-width:100%; display:block; margin:6px 0; }
     .small { color:#666; font-size:0.9em; }
+    .hidden { color:red; font-weight:bold; }
+    form.inline { display:inline; }
   </style>
 </head>
 <body>
-  <h1>Community — Posts dei tuoi clienti</h1>
-  <p><a href="${pageContext.request.contextPath}/staff/home">← Staff Home</a></p>
 
-  <c:if test="${empty posts}">
-    <p>Nessun post trovato dai tuoi clienti.</p>
-  </c:if>
+<h1>Community Feed</h1>
 
-  <c:forEach var="post" items="${posts}">
-    <div class="post">
-      <h3><c:out value="${post.userName}" /></h3>
-      <div class="small"><fmt:formatDate value="${post.createdAt}" pattern="yyyy-MM-dd HH:mm" /></div>
-      <p><c:out value="${post.content}" /></p>
+<!-- NAV -->
+<c:choose>
+  <c:when test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
+    <p><a href="${pageContext.request.contextPath}/admin/home">← Admin Home</a></p>
+    <p class="small">Puoi nascondere o eliminare i post della community.</p>
+  </c:when>
+  <c:otherwise>
+    <p><a href="${pageContext.request.contextPath}/staff/home">← Staff Home</a></p>
+    <p class="small">Puoi visualizzare e valutare i post dei tuoi clienti.</p>
+  </c:otherwise>
+</c:choose>
 
-      <c:if test="${not empty post.medias}">
-        <div class="media">
-          <c:forEach var="m" items="${post.medias}">
-            <c:set var="fid" value="${m.fileId}" />
-            <c:set var="ctype" value="${m.contentType}" />
-            <c:choose>
-              <c:when test="${fn:startsWith(ctype, 'image')}">
-                <img src="${pageContext.request.contextPath}/media/${fid}" alt="${m.filename}" />
-              </c:when>
-              <c:when test="${fn:startsWith(ctype, 'video')}">
-                <video controls>
-                  <source src="${pageContext.request.contextPath}/media/${fid}" type="${ctype}" />
-                </video>
-              </c:when>
-              <c:otherwise>
-                <a href="${pageContext.request.contextPath}/media/${fid}"><c:out value="${m.filename}" /></a>
-              </c:otherwise>
-            </c:choose>
-          </c:forEach>
-        </div>
-      </c:if>
+<c:if test="${empty posts}">
+  <p>Nessun post disponibile.</p>
+</c:if>
 
-      <p>
-        <a href="${pageContext.request.contextPath}/posts/view?id=${post._idStr}">View</a>
-        &nbsp;|&nbsp;
-        <a href="${pageContext.request.contextPath}/posts/view?id=${post._idStr}#comments">Comments</a>
-      </p>
+<c:forEach var="post" items="${posts}">
+  <div class="post">
 
-      <!-- evaluation form (solo per trainer) -->
-      <c:if test="${not empty sessionScope.user and (sessionScope.user.ruolo == 'PERSONALE' or sessionScope.user.ruolo == 'PROPRIETARIO')}">
-        <form method="post" action="${pageContext.request.contextPath}/posts/evaluate">
-          <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-          <input type="hidden" name="postId" value="${post._idStr}" />
-          Score:
-          <select name="score" required>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-          <input type="text" name="note" placeholder="Short note (optional)" />
-          <button type="submit">Valuta</button>
-        </form>
-      </c:if>
+    <!-- VISIBILITÀ -->
+    <c:if test="${post.visibility == 'HIDDEN'}">
+      <div class="hidden">[POST NASCOSTO]</div>
+    </c:if>
 
+    <h3><c:out value="${post.userName}" /></h3>
+    <div class="small">
+      <fmt:formatDate value="${post.createdAt}" pattern="yyyy-MM-dd HH:mm" />
     </div>
-  </c:forEach>
+
+    <p><c:out value="${post.content}" /></p>
+
+    <!-- MEDIA -->
+    <c:if test="${not empty post.medias}">
+      <div class="media">
+        <c:forEach var="m" items="${post.medias}">
+          <c:set var="fid" value="${m.fileId}" />
+          <c:choose>
+            <c:when test="${fn:startsWith(m.contentType,'image')}">
+              <img src="${pageContext.request.contextPath}/media/${fid}" />
+            </c:when>
+            <c:when test="${fn:startsWith(m.contentType,'video')}">
+              <video controls>
+                <source src="${pageContext.request.contextPath}/media/${fid}" type="${m.contentType}" />
+              </video>
+            </c:when>
+            <c:otherwise>
+              <a href="${pageContext.request.contextPath}/media/${fid}">
+                <c:out value="${m.filename}" />
+              </a>
+            </c:otherwise>
+          </c:choose>
+        </c:forEach>
+      </div>
+    </c:if>
+
+    <!-- ================= ADMIN ACTIONS ================= -->
+    <c:if test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
+
+      <!-- SOFT DELETE -->
+      <form method="post"
+            action="${pageContext.request.contextPath}/admin/posts/hide"
+            class="inline">
+        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+        <input type="hidden" name="postId" value="${post._idStr}" />
+        <input type="text" name="reason" placeholder="Motivo (opzionale)" />
+        <button type="submit">👁 Nascondi</button>
+      </form>
+
+      <!-- HARD DELETE -->
+      <form method="post"
+            action="${pageContext.request.contextPath}/posts/delete"
+            class="inline"
+            onsubmit="return confirm('Eliminazione DEFINITIVA. Continuare?');">
+        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+        <input type="hidden" name="postId" value="${post._idStr}" />
+        <button type="submit" style="color:red">🗑 Elimina</button>
+      </form>
+
+    </c:if>
+
+    <!-- ================= TRAINER EVALUATION ================= -->
+    <c:if test="${sessionScope.user.ruolo == 'PERSONALE'}">
+      <form method="post" action="${pageContext.request.contextPath}/posts/evaluate">
+        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+        <input type="hidden" name="postId" value="${post._idStr}" />
+
+        Score:
+        <select name="score" required>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+
+        <input type="text" name="note" placeholder="Nota (opzionale)" />
+        <button type="submit">Valuta</button>
+      </form>
+    </c:if>
+
+  </div>
+</c:forEach>
 
 </body>
 </html>

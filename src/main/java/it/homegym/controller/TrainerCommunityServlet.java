@@ -4,6 +4,7 @@ import it.homegym.dao.PostDAO;
 import it.homegym.dao.UtenteDAO;
 import it.homegym.model.Utente;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -43,16 +44,30 @@ public class TrainerCommunityServlet extends HttpServlet {
         }
 
         try {
-            // prendi id clienti assegnati al trainer
-            List<Integer> clientIds = utenteDao.listClientIdsByTrainer(user.getId());
-
+            
             List<Document> posts;
-            if (clientIds == null || clientIds.isEmpty()) {
-                // fallback: mostra tutti i post (o vuoto) — evita null pointer
-                posts = postDao.listFeed(1, 30); // pagina 1, 30 elementi
+
+            if ("PROPRIETARIO".equals(user.getRuolo())) {
+                posts = postDao.listAllForAdmin(1, 30);
             } else {
-                posts = postDao.listByUserIds(clientIds, 1, 30);
+                // prendi id clienti assegnati al trainer
+                List<Integer> clientIds = utenteDao.listClientIdsByTrainer(user.getId());
+                posts = postDao.listVisibleByUserIds(clientIds, 1, 30);
             }
+
+
+            // converti ObjectId in stringa per URL
+            for (Document p : posts) {
+                Object rawId = p.get("_id");
+                if (rawId instanceof ObjectId) {
+                    p.put("_idStr", ((ObjectId) rawId).toHexString());
+                } else if (rawId != null) {
+                    p.put("_idStr", rawId.toString());
+                } else {
+                    p.put("_idStr", "");
+                }
+            }
+
 
             req.setAttribute("posts", posts);
             req.getRequestDispatcher("/WEB-INF/views/staff/community.jsp").forward(req, resp);

@@ -32,7 +32,12 @@
 <c:choose>
   <c:when test="${empty post}">
     <h2>Post non trovato</h2>
-    <p><a href="${pageContext.request.contextPath}/posts">← Back to feed</a></p>
+    <c:if test="${sessionScope.user.ruolo == 'PROPRIETARIO' || sessionScope.user.ruolo == 'PERSONALE'}">
+      <p><a href="${pageContext.request.contextPath}/staff/community">← Back to feed</a></p>
+    </c:if>
+    <c:if test="${sessionScope.user.ruolo == 'CLIENTE'}">
+      <p><a href="${pageContext.request.contextPath}/posts">← Back to feed</a></p>
+    </c:if>
   </c:when>
 
   <c:otherwise>
@@ -66,6 +71,23 @@
           </c:forEach>
         </div>
       </c:if>
+      <!-- DELETE POST OPTION -->
+      <c:if test="${not empty sessionScope.user and 
+            (sessionScope.user.ruolo == 'PROPRIETARIO' 
+             or sessionScope.user.id == post.userId)}">
+
+      <form method="post"
+            action="${pageContext.request.contextPath}/posts/delete"
+            onsubmit="return confirm('Vuoi eliminare definitivamente questo post?');"
+            class="inline">
+
+        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+        <input type="hidden" name="postId" value="${post._idStr}" />
+        <button type="submit" style="color:red">🗑 Elimina</button>
+      </form>
+
+    </c:if>
+
 
       <p class="small">Visibility: <c:out value="${post.visibility}" /></p>
 

@@ -55,6 +55,7 @@ public class PostDAO {
         }
     }
 
+    // Crea un nuovo post e ritorna il suo ObjectId
     public ObjectId createPost(int userId, String userName, String content, List<Document> medias) {
         Document d = new Document()
                 .append("userId", userId)
@@ -71,35 +72,78 @@ public class PostDAO {
         return d.getObjectId("_id");
     }
 
-    public List<Document> listFeed(int page, int pageSize) {
+    // Nasconde un post (impostando visibilità a HIDDEN) con motivazione
+    public boolean hidePost(ObjectId postId, int adminId, String reason) {
+    Document update = new Document("$set",
+            new Document("visibility", "HIDDEN")
+                    .append("hiddenBy", adminId)
+                    .append("hiddenReason", reason)
+                    .append("hiddenAt", new Date())
+                    .append("updatedAt", new Date())
+        );
+
+        return col.updateOne(Filters.eq("_id", postId), update)
+                .getModifiedCount() > 0;
+    }
+
+    // Elenca i post pubblici per il feed, con paginazione
+    public List<Document> listFeedPublic(int page, int pageSize) {
         int skip = (page - 1) * pageSize;
 
-        FindIterable<Document> it = col.find()
-                .sort(Indexes.descending("createdAt"))
-                .skip(skip)
-                .limit(pageSize);
+        FindIterable<Document> it = col.find(
+                Filters.eq("visibility", "PUBLIC")
+            )
+            .sort(Sorts.descending("createdAt"))
+            .skip(skip)
+            .limit(pageSize);
 
         List<Document> out = new ArrayList<>();
         for (Document d : it) out.add(d);
         return out;
     }
 
-    public List<Document> listByUserIds(List<Integer> userIds, int page, int pageSize) {
+    // Elenca i post pubblici creati dagli utenti specificati, con paginazione
+    public List<Document> listVisibleByUserIds(List<Integer> userIds, int page, int pageSize) {
         if (userIds == null || userIds.isEmpty()) return new ArrayList<>();
+
         int skip = Math.max(0, (page - 1)) * pageSize;
-        FindIterable<Document> it = col.find(Filters.in("userId", userIds))
-                .sort(Sorts.descending("createdAt"))
-                .skip(skip)
-                .limit(pageSize);
+
+        FindIterable<Document> it = col.find(
+                Filters.and(
+                    Filters.in("userId", userIds),
+                    Filters.eq("visibility", "PUBLIC")
+                )
+            )
+            .sort(Sorts.descending("createdAt"))
+            .skip(skip)
+            .limit(pageSize);
+
         List<Document> out = new ArrayList<>();
         for (Document d : it) out.add(d);
         return out;
     }
+
+    // Elenca tutti i post per l'admin, con paginazione
+    public List<Document> listAllForAdmin(int page, int pageSize) {
+        int skip = Math.max(0, (page - 1)) * pageSize;
+
+        FindIterable<Document> it = col.find()
+            .sort(Sorts.descending("createdAt"))
+            .skip(skip)
+            .limit(pageSize);
+
+        List<Document> out = new ArrayList<>();
+        for (Document d : it) out.add(d);
+        return out;
+    }
+
+
 
     public Document findById(ObjectId id) {
         return col.find(Filters.eq("_id", id)).first();
     }
 
+    // Aggiunge un commento a un post
     public void addComment(ObjectId postId, int userId, String userName, String text) {
         Document comment = new Document("_id", new ObjectId())
                 .append("userId", userId)
@@ -113,6 +157,22 @@ public class PostDAO {
                         .append("$set", new Document("updatedAt", Date.from(Instant.now())))
         );
     }
+
+    // Ripristina un post nascosto rendendolo di nuovo pubblico
+    public boolean restorePost(ObjectId postId) {
+        Document update = new Document("$set",
+                new Document("visibility", "PUBLIC")
+                        .append("updatedAt", new Date())
+        ).append("$unset",
+                new Document("hiddenBy", "")
+                        .append("hiddenReason", "")
+                        .append("hiddenAt", "")
+        );
+
+        return col.updateOne(Filters.eq("_id", postId), update)
+                .getModifiedCount() > 0;
+    }
+
 
         /**
      * Verifica se il trainer ha già inserito una valutazione per questo post.
