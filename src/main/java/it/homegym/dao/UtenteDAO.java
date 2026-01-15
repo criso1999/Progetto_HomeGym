@@ -57,6 +57,21 @@ public class UtenteDAO {
         return list;
     }
 
+    public List<Integer> listClientIdsByTrainer(int trainerId) throws Exception {
+        String sql = "SELECT id FROM utente WHERE trainer_id = ?";
+        List<Integer> out = new ArrayList<>();
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, trainerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(rs.getInt("id"));
+                }
+            }
+        }
+        return out;
+    }
+
     public boolean update(Utente u) throws SQLException {
         String sql = "UPDATE utente SET nome = ?, cognome = ?, email = ?, ruolo = ? WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();

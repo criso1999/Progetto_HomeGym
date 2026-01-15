@@ -10,6 +10,7 @@
     <label>Media (image/video) <input type="file" name="media" multiple /></label><br/>
     <button type="submit">Post</button>
   </form>
+  <p><a href="${pageContext.request.contextPath}/client/home">← Torna</a></p>
   <p><a href="${pageContext.request.contextPath}/posts">← Feed</a></p>
 </body>
 </html>

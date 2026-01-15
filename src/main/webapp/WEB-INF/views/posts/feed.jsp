@@ -38,5 +38,6 @@
       <p><a href="${pageContext.request.contextPath}/posts/view?id=${p._id}">View post</a></p>
     </div>
   </c:forEach>
+  <p><a href="${pageContext.request.contextPath}/client/home">← Torna</a></p>
 </body>
 </html>
