@@ -30,6 +30,7 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/StaffSessionsActionServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/StaffSessionsServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TestServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TrainerCommunityServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TrainerEvaluationServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/MediaDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PasswordResetDAO.java
