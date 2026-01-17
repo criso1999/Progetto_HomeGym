@@ -7,6 +7,7 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.util.List;
 
 @WebServlet("/staff/clients/form")
 public class StaffClientFormServlet extends HttpServlet {
@@ -19,11 +20,17 @@ public class StaffClientFormServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String id = req.getParameter("id");
-        if (id != null) {
-            try {
+        try {
+            // lista trainer per la select
+            List<Utente> trainers = dao.listByRole("PERSONALE");
+            req.setAttribute("trainers", trainers);
+
+            if (id != null && !id.isBlank()) {
                 Utente u = dao.findById(Integer.parseInt(id));
                 req.setAttribute("client", u);
-            } catch (Exception e) { throw new ServletException(e); }
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
         }
         req.getRequestDispatcher("/WEB-INF/views/staff/client-form.jsp").forward(req, resp);
     }

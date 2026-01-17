@@ -4,14 +4,17 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import org.bson.Document;
+import it.homegym.dao.UtenteDAO;
+import it.homegym.model.Utente;
 import org.bson.BsonDateTime;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -72,16 +75,16 @@ public class PostsViewServlet extends HttpServlet {
             }
 
             // --- Normalizza _id e crea _idStr (hex) ---
+            String hexId;
             if (postDoc.containsKey("_id")) {
                 Object raw = postDoc.get("_id");
-                String hex;
                 if (raw instanceof ObjectId) {
-                    hex = ((ObjectId) raw).toHexString();
+                    hexId = ((ObjectId) raw).toHexString();
                 } else {
-                    hex = raw != null ? raw.toString() : "";
+                    hexId = raw != null ? raw.toString() : "";
                 }
-                postDoc.put("_id", hex);
-                postDoc.put("_idStr", hex);
+                postDoc.put("_id", hexId);
+                postDoc.put("_idStr", hexId);
             } else {
                 postDoc.put("_idStr", "");
             }
@@ -145,8 +148,52 @@ public class PostsViewServlet extends HttpServlet {
             }
 
             // default visibility if missing
-            if (!postDoc.containsKey("visibility")) {
-                postDoc.put("visibility", "PUBLIC");
+            String visibility = postDoc.getString("visibility");
+            if (visibility == null) {
+                visibility = "PUBLIC";
+                postDoc.put("visibility", visibility);
+            }
+
+            // --- AUTH / VISIBILITY RULES ---
+            HttpSession session = req.getSession(false);
+            Utente user = session != null ? (Utente) session.getAttribute("user") : null;
+
+            // if hidden, only PROPRIETARIO can see -> otherwise 404
+            if ("HIDDEN".equalsIgnoreCase(visibility)) {
+                if (user == null || !"PROPRIETARIO".equals(user.getRuolo())) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+            }
+
+            // If logged-in is PERSONALE, allow view only for their assigned clients
+            if (user != null && "PERSONALE".equals(user.getRuolo())) {
+                // get post author id (robusto)
+                Integer authorId = null;
+                Object maybeUid = postDoc.get("userId");
+                if (maybeUid instanceof Number) {
+                    authorId = ((Number) maybeUid).intValue();
+                } else if (maybeUid != null) {
+                    try { authorId = Integer.parseInt(maybeUid.toString()); } catch (NumberFormatException ignored) {}
+                }
+
+                if (authorId == null) {
+                    // No author id -> deny
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+
+                try {
+                    UtenteDAO udao = new UtenteDAO();
+                    List<Integer> clientIds = udao.listClientIdsByTrainer(user.getId());
+                    if (clientIds == null || !clientIds.contains(authorId)) {
+                        resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                        return;
+                    }
+                } catch (SQLException sqle) {
+                    // problem reading DB -> return error
+                    throw new ServletException("Errore controllo autorizzazione trainer", sqle);
+                }
             }
 
             // pass to JSP

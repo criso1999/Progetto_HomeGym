@@ -20,13 +20,13 @@
         <td><c:out value="${c.nome}"/></td>
         <td><c:out value="${c.cognome}"/></td>
         <td><c:out value="${c.email}"/></td>
-        <td>
+       <td>
           <a href="${pageContext.request.contextPath}/staff/clients/form?id=${c.id}">Modifica</a>
           <form method="post" action="${pageContext.request.contextPath}/staff/clients/action" style="display:inline" onsubmit="return confirm('Confermi?');">
             <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
             <input type="hidden" name="action" value="delete"/>
             <input type="hidden" name="id" value="${c.id}"/>
-            <button type="submit">Elimina</button>
+           <!-- <button type="submit">Elimina</button> -->
           </form>
         </td>
       </tr>

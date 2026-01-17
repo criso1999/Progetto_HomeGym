@@ -3,6 +3,8 @@
 <%@ page import="it.homegym.model.Utente" %>
 
 <c:set var="client" value="${requestScope.client}" />
+<c:set var="trainers" value="${requestScope.trainers}" />
+
 <%
   it.homegym.model.Utente cl = (it.homegym.model.Utente) request.getAttribute("client");
 %>
@@ -15,6 +17,7 @@
 
 <form method="post" action="${pageContext.request.contextPath}/staff/clients/action">
   <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+
   <c:if test="${client != null}">
     <input type="hidden" name="action" value="update"/>
     <input type="hidden" name="id" value="${client.id}"/>
@@ -26,6 +29,20 @@
   Nome: <input name="nome" value="${client != null ? client.nome : ''}" required/><br/>
   Cognome: <input name="cognome" value="${client != null ? client.cognome : ''}" required/><br/>
   Email: <input name="email" type="email" value="${client != null ? client.email : ''}" required/><br/>
+
+  <label>Assegna trainer:
+    <select name="trainerId">
+      <option value="">-- nessun trainer --</option>
+      <c:forEach var="t" items="${trainers}">
+        <c:set var="selected" value="${client != null and client.trainerId != null and (client.trainerId == t.id)}"/>
+        <option value="${t.id}" ${selected ? 'selected="selected"' : ''}>
+          <c:out value="${t.nome}"/> <c:out value="${t.cognome}"/> (id:${t.id})
+        </option>
+      </c:forEach>
+    </select>
+  </label>
+  <br/>
+
   <c:if test="${client == null}">
     Password (iniziale): <input name="password" type="password" required/><br/>
   </c:if>

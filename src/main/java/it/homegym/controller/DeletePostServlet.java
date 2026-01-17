@@ -65,6 +65,12 @@ public class DeletePostServlet extends HttpServlet {
 
         postDao.deletePost(oid);
         session.setAttribute("flashSuccess", "Post eliminato con successo");
-        resp.sendRedirect(req.getContextPath() + "/posts");
+        if(isAdmin || isAuthor){
+            resp.sendRedirect(req.getContextPath() + "/staff/community");
+        }
+        else{
+            resp.sendRedirect(req.getContextPath() + "/posts");
+        }
+        
     }
 }
