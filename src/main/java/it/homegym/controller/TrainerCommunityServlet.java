@@ -51,7 +51,7 @@ public class TrainerCommunityServlet extends HttpServlet {
                 posts = postDao.listAllForAdmin(1, 30);
             } else {
                 // prendi id clienti assegnati al trainer
-                List<Integer> clientIds = utenteDao.listClientIdsByTrainer(user.getId());
+                List<Integer> clientIds = utenteDao.listClient(user.getId());
                 posts = postDao.listVisibleByUserIds(clientIds, 1, 30);
             }
 

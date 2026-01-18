@@ -19,27 +19,31 @@ public class StaffClientActionServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // CSRF / auth filters già presenti a livello di app
         String action = req.getParameter("action");
+        HttpSession session = req.getSession(false);
+        Utente current = session != null ? (Utente) session.getAttribute("user") : null;
+
         try {
-            if ("create".equals(action)) {
-                Utente u = new Utente();
-                u.setNome(req.getParameter("nome"));
-                u.setCognome(req.getParameter("cognome"));
-                u.setEmail(req.getParameter("email"));
-                String pwd = req.getParameter("password");
-                u.setPassword(BCrypt.hashpw(pwd, BCrypt.gensalt(12)));
-                u.setRuolo("CLIENTE");
-
-                // trainer assignment (nullable)
-                String trainerParam = req.getParameter("trainerId");
-                if (trainerParam != null && !trainerParam.isBlank()) {
-                    try { u.setTrainerId(Integer.parseInt(trainerParam)); } catch (NumberFormatException ignored) { u.setTrainerId(null); }
-                } else {
-                    u.setTrainerId(null);
+            if ("assign".equals(action)) {
+                if (current == null || (!"PERSONALE".equals(current.getRuolo()) && !"PROPRIETARIO".equals(current.getRuolo()))) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
                 }
-
-                dao.create(u);
+                String existingUserId = req.getParameter("existingUserId");
+                if (existingUserId == null || existingUserId.isBlank()) {
+                    resp.sendRedirect(req.getContextPath() + "/staff/clients");
+                    return;
+                }
+                int userId = Integer.parseInt(existingUserId);
+                int trainerId = current.getId();
+                // allow owner to override trainer selection via trainerId param
+                if ("PROPRIETARIO".equals(current.getRuolo())) {
+                    String t = req.getParameter("trainerId");
+                    if (t != null && !t.isBlank()) {
+                        try { trainerId = Integer.parseInt(t); } catch (NumberFormatException ignored) {}
+                    }
+                }
+                dao.assignTrainerToUser(userId, trainerId);
 
             } else if ("update".equals(action)) {
                 int id = Integer.parseInt(req.getParameter("id"));
@@ -49,7 +53,6 @@ public class StaffClientActionServlet extends HttpServlet {
                     u.setCognome(req.getParameter("cognome"));
                     u.setEmail(req.getParameter("email"));
 
-                    // trainer assignment (nullable)
                     String trainerParam = req.getParameter("trainerId");
                     if (trainerParam != null && !trainerParam.isBlank()) {
                         try { u.setTrainerId(Integer.parseInt(trainerParam)); } catch (NumberFormatException ignored) { u.setTrainerId(null); }
@@ -60,7 +63,6 @@ public class StaffClientActionServlet extends HttpServlet {
                     dao.update(u);
                 }
 
-                // update password if provided
                 String newPwd = req.getParameter("password");
                 if (newPwd != null && !newPwd.isBlank()) {
                     dao.updatePassword(id, BCrypt.hashpw(newPwd, BCrypt.gensalt(12)));
@@ -68,7 +70,6 @@ public class StaffClientActionServlet extends HttpServlet {
 
             } else if ("delete".equals(action)) {
                 int id = Integer.parseInt(req.getParameter("id"));
-                // soft delete: non cancelliamo la riga, la markiamo come deleted = 1
                 dao.softDeleteById(id);
             }
 

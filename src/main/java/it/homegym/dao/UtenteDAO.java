@@ -30,7 +30,11 @@ public class UtenteDAO {
 
     public List<Utente> listByRole(String ruolo) throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id FROM utente WHERE ruolo = ? ORDER BY id DESC";
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted\r\n" + //
+                        "FROM utente\r\n" + //
+                        "WHERE ruolo = ? AND (deleted = 0 OR deleted IS NULL)\r\n" + //
+                        "ORDER BY id DESC\r\n" + //
+                        "";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, ruolo);
@@ -44,19 +48,32 @@ public class UtenteDAO {
         return list;
     }
 
-    public List<Integer> listClientIdsByTrainer(int trainerId) throws Exception {
-        String sql = "SELECT id FROM utente WHERE trainer_id = ?";
-        List<Integer> out = new ArrayList<>();
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+    // Lista clienti assegnati a un trainer (esclude deleted)
+    public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted FROM utente " +
+                    "WHERE trainer_id = ? AND (deleted = 0 OR deleted IS NULL) ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, trainerId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out.add(rs.getInt("id"));
-                }
+                while (rs.next()) list.add(mapRow(rs));
             }
         }
-        return out;
+        return list;
+    }
+
+    // Lista clienti disponibili per assegnazione (non assegnati e non deleted)
+    public List<Utente> listAvailableClientsForAssign() throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted FROM utente " +
+                    "WHERE (trainer_id IS NULL) AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(mapRow(rs));
+        }
+        return list;
     }
 
     public boolean update(Utente u) throws SQLException {
@@ -154,15 +171,27 @@ public class UtenteDAO {
         }
     }
 
-     // Soft delete: marca deleted = 1 (non visibile nelle liste)
+    // Assegna trainer ad un utente esistente (set trainer_id, imposta ruolo CLIENTE)
+    public boolean assignTrainerToUser(int userId, int trainerId) throws SQLException {
+        String sql = "UPDATE utente SET trainer_id = ?, ruolo = 'CLIENTE' WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setObject(1, trainerId, java.sql.Types.INTEGER);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // Soft delete: imposta deleted = 1 (true) invece di cancellare
     public boolean softDeleteById(int id) throws SQLException {
         String sql = "UPDATE utente SET deleted = 1 WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         }
     }
+
 
     private Utente mapRow(ResultSet rs) throws SQLException {
         Utente u = new Utente();

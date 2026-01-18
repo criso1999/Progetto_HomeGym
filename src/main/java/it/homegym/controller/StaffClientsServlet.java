@@ -11,7 +11,6 @@ import java.util.List;
 
 @WebServlet("/staff/clients")
 public class StaffClientsServlet extends HttpServlet {
-
     private UtenteDAO dao;
 
     @Override
@@ -25,15 +24,31 @@ public class StaffClientsServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // controllo ruolo (in più al filtro)
         HttpSession s = req.getSession(false);
         if (s == null || s.getAttribute("user") == null) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
+        Utente current = (Utente) s.getAttribute("user");
+
         try {
-            List<Utente> clients = dao.listByRole("CLIENTE");
+            List<Utente> clients;
+            // se il loggato è PERSONALE mostra solo i suoi clienti
+            if ("PERSONALE".equals(current.getRuolo())) {
+                clients = dao.listClientsByTrainer(current.getId());
+                // disponibili per l'assign: clienti senza trainer
+                List<Utente> available = dao.listAvailableClientsForAssign();
+                req.setAttribute("availableClients", available);
+            } else {
+                // PROPRIETARIO / admin: mostra tutti i clienti (non deleted)
+                clients = dao.listByRole("CLIENTE");
+                // admin può anche vedere la lista disponibile per assign
+                List<Utente> available = dao.listAvailableClientsForAssign();
+                req.setAttribute("availableClients", available);
+            }
+
             req.setAttribute("clients", clients);
+            req.setAttribute("currentUser", current);
             req.getRequestDispatcher("/WEB-INF/views/staff/clients.jsp").forward(req, resp);
         } catch (Exception e) {
             throw new ServletException(e);
