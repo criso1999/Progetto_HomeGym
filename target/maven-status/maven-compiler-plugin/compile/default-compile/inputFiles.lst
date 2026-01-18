@@ -24,6 +24,7 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/PostsViewServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/RegisterServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/ResetPasswordServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/RestorePostServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/StaffClientActionServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/StaffClientFormServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/StaffClientsServlet.java

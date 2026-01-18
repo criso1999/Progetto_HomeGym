@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page import="it.homegym.model.Utente" %>
 
 <!doctype html>
@@ -9,9 +10,20 @@
   <title>Clienti - Staff</title>
   <style>
     .deleted { color: #999; text-decoration: line-through; }
+    .small { font-size:0.9em; color:#666; }
+    form.inline { display:inline; }
   </style>
 </head>
 <body>
+<c:if test="${not empty sessionScope.flashSuccess}">
+  <div style="color:green">${sessionScope.flashSuccess}</div>
+  <c:remove var="flashSuccess" scope="session"/>
+</c:if>
+<c:if test="${not empty sessionScope.flashError}">
+  <div style="color:red">${sessionScope.flashError}</div>
+  <c:remove var="flashError" scope="session"/>
+</c:if>
+
 <h1>Clienti</h1>
 
 <!-- Se sei PERSONALE: form per assegnare un cliente esistente a te -->
@@ -87,8 +99,15 @@
         <td>
           <c:choose>
             <c:when test="${not empty c.trainerId}">
-              <c:out value="${c.trainerId}"/>
-              <!-- se vuoi mostrare anche nome trainer, il servlet deve popolare una mappa id->nome -->
+              <!-- preferisci nome del trainer se fornito dal servlet -->
+              <c:choose>
+                <c:when test="${not empty trainerNames and not empty trainerNames[c.trainerId]}">
+                  <c:out value="${trainerNames[c.trainerId]}"/>
+                </c:when>
+                <c:otherwise>
+                  <c:out value="${c.trainerId}"/>
+                </c:otherwise>
+              </c:choose>
             </c:when>
             <c:otherwise>
               <em>—</em>
@@ -97,13 +116,43 @@
         </td>
         <td>
           <a href="${pageContext.request.contextPath}/staff/clients/form?id=${c.id}">Modifica</a>
+          &nbsp;
 
-          <form method="post" action="${pageContext.request.contextPath}/staff/clients/action" style="display:inline" onsubmit="return confirm('Confermi soft-delete di questo cliente?');">
-            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-            <input type="hidden" name="action" value="delete"/>
-            <input type="hidden" name="id" value="${c.id}"/>
-            <button type="submit">Rimuovi (nascondi)</button>
-          </form>
+          <!-- Se il cliente è soft-deleted: mostra Ripristina (se autorizzato) oppure una label -->
+          <c:if test="${c.deleted}">
+            <c:choose>
+              <c:when test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
+                <form method="post" action="${pageContext.request.contextPath}/staff/clients/action" class="inline" onsubmit="return confirm('Ripristinare questo cliente?');">
+                  <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+                  <input type="hidden" name="action" value="restore"/>
+                  <input type="hidden" name="id" value="${c.id}"/>
+                  <button type="submit">Ripristina</button>
+                </form>
+              </c:when>
+              <c:when test="${sessionScope.user.ruolo == 'PERSONALE' and sessionScope.user.id == c.trainerId}">
+                <form method="post" action="${pageContext.request.contextPath}/staff/clients/action" class="inline" onsubmit="return confirm('Ripristinare questo cliente?');">
+                  <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+                  <input type="hidden" name="action" value="restore"/>
+                  <input type="hidden" name="id" value="${c.id}"/>
+                  <button type="submit">Ripristina</button>
+                </form>
+              </c:when>
+              <c:otherwise>
+                <span class="small">Rimosso</span>
+              </c:otherwise>
+            </c:choose>
+          </c:if>
+
+          <!-- Se non deleted: mostra il bottone Rimuovi (soft-delete) -->
+          <c:if test="${not c.deleted}">
+            <form method="post" action="${pageContext.request.contextPath}/staff/clients/action" class="inline" onsubmit="return confirm('Confermi soft-delete di questo cliente?');">
+              <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+              <input type="hidden" name="action" value="delete"/>
+              <input type="hidden" name="id" value="${c.id}"/>
+              <button type="submit">Rimuovi (nascondi)</button>
+            </form>
+          </c:if>
+
         </td>
       </tr>
     </c:forEach>

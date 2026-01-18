@@ -73,6 +73,52 @@ public class StaffClientActionServlet extends HttpServlet {
                 dao.softDeleteById(id);
             }
 
+            else if ("restore".equals(action)) {
+                // restore soft-deleted user
+                if (current == null || (!"PERSONALE".equals(current.getRuolo()) && !"PROPRIETARIO".equals(current.getRuolo()))) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+
+                String idS = req.getParameter("id");
+                if (idS == null || idS.isBlank()) {
+                    session.setAttribute("flashError", "ID cliente mancante.");
+                    resp.sendRedirect(req.getContextPath() + "/staff/clients");
+                    return;
+                }
+                int id = Integer.parseInt(idS);
+
+                // controlla permessi: trainer può ripristinare SOLO i clienti assegnati a lui
+                Utente cliente = dao.findById(id);
+                if (cliente == null) {
+                    session.setAttribute("flashError", "Cliente non trovato.");
+                    resp.sendRedirect(req.getContextPath() + "/staff/clients");
+                    return;
+                }
+
+                boolean allowed = false;
+                if ("PROPRIETARIO".equals(current.getRuolo())) {
+                    allowed = true;
+                } else if ("PERSONALE".equals(current.getRuolo())) {
+                    // trainer può ripristinare solo se è trainer assegnato al cliente
+                    Integer trainerId = cliente.getTrainerId();
+                    allowed = (trainerId != null && trainerId.equals(current.getId()));
+                }
+
+                if (!allowed) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Non autorizzato a ripristinare questo cliente");
+                    return;
+                }
+
+                boolean ok = dao.restoreById(id);
+                if (ok) {
+                    session.setAttribute("flashSuccess", "Cliente ripristinato correttamente.");
+                } else {
+                    session.setAttribute("flashError", "Impossibile ripristinare il cliente.");
+                }
+            }
+
+
             resp.sendRedirect(req.getContextPath() + "/staff/clients");
         } catch (Exception e) {
             throw new ServletException(e);

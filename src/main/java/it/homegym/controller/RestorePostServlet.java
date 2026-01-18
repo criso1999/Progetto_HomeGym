@@ -12,8 +12,8 @@ import org.bson.types.ObjectId;
 import it.homegym.dao.PostDAO;
 import it.homegym.model.Utente;
 
-@WebServlet("/admin/posts/hide")
-public class HidePostServlet extends HttpServlet {
+@WebServlet("/admin/posts/restore")
+public class RestorePostServlet extends HttpServlet {
 
     private PostDAO postDao;
 
@@ -29,7 +29,7 @@ public class HidePostServlet extends HttpServlet {
         HttpSession session = req.getSession(false);
         String ctx = req.getContextPath();
 
-        // se non autenticato -> login
+        // controllo sessione / login
         if (session == null || session.getAttribute("user") == null) {
             resp.sendRedirect(ctx + "/login");
             return;
@@ -42,11 +42,7 @@ public class HidePostServlet extends HttpServlet {
         }
 
         String postId = req.getParameter("postId");
-        String reason = req.getParameter("reason");
-        if (reason == null) reason = "";
-
-        // fallback redirect: la pagina di gestione staff/community (richiesta)
-        String redirectTo = ctx + "/staff/community";
+        String redirectTo = ctx + "/staff/community"; // ritorno alla stessa pagina
 
         if (postId == null || postId.isBlank()) {
             session.setAttribute("flashError", "ID post mancante.");
@@ -64,15 +60,15 @@ public class HidePostServlet extends HttpServlet {
         }
 
         try {
-            boolean ok = postDao.hidePost(oid, u.getId(), reason);
+            boolean ok = postDao.restorePost(oid);
             if (ok) {
-                session.setAttribute("flashSuccess", "Post nascosto con successo.");
+                session.setAttribute("flashSuccess", "Post ripristinato e reso visibile.");
             } else {
-                session.setAttribute("flashError", "Impossibile nascondere il post (forse non esiste o è già nascosto).");
+                session.setAttribute("flashError", "Impossibile ripristinare il post (forse non esiste o già pubblico).");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            session.setAttribute("flashError", "Errore interno durante la moderazione del post.");
+            session.setAttribute("flashError", "Errore interno durante il ripristino del post.");
         }
 
         resp.sendRedirect(redirectTo);

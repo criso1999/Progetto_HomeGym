@@ -20,6 +20,21 @@
 
 <h1>Community Feed</h1>
 
+<!-- Flash messages -->
+<c:if test="${not empty sessionScope.flashSuccess}">
+  <div style="color:green;margin:10px 0;">
+    ${sessionScope.flashSuccess}
+  </div>
+  <c:remove var="flashSuccess" scope="session"/>
+</c:if>
+
+<c:if test="${not empty sessionScope.flashError}">
+  <div style="color:red;margin:10px 0;">
+    ${sessionScope.flashError}
+  </div>
+  <c:remove var="flashError" scope="session"/>
+</c:if>
+
 <!-- NAV -->
 <c:choose>
   <c:when test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
@@ -77,28 +92,54 @@
 
     <!-- ================= ADMIN ACTIONS ================= -->
     <c:if test="${sessionScope.user.ruolo == 'PROPRIETARIO'}">
+      <c:choose>
+        <c:when test="${post.visibility == 'HIDDEN'}">
+          <!-- Ripristina (UNHIDE) -->
+          <form method="post"
+                action="${pageContext.request.contextPath}/admin/posts/restore"
+                class="inline"
+                onsubmit="return confirm('Ripristinare la visibilità di questo post?');">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+            <input type="hidden" name="postId" value="${post._idStr}" />
+            <button type="submit">♻ Ripristina</button>
+          </form>
 
-      <!-- SOFT DELETE -->
-      <form method="post"
-            action="${pageContext.request.contextPath}/admin/posts/hide"
-            class="inline">
-        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-        <input type="hidden" name="postId" value="${post._idStr}" />
-        <input type="text" name="reason" placeholder="Motivo (opzionale)" />
-        <button type="submit">👁 Nascondi</button>
-      </form>
+          <!-- opzionalmente mostra anche elimina definitiva -->
+          <form method="post"
+                action="${pageContext.request.contextPath}/posts/delete"
+                class="inline"
+                onsubmit="return confirm('Eliminazione DEFINITIVA. Continuare?');">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+            <input type="hidden" name="postId" value="${post._idStr}" />
+            <button type="submit" style="color:red">🗑 Elimina</button>
+          </form>
 
-      <!-- HARD DELETE -->
-      <form method="post"
-            action="${pageContext.request.contextPath}/posts/delete"
-            class="inline"
-            onsubmit="return confirm('Eliminazione DEFINITIVA. Continuare?');">
-        <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-        <input type="hidden" name="postId" value="${post._idStr}" />
-        <button type="submit" style="color:red">🗑 Elimina</button>
-      </form>
+        </c:when>
+        <c:otherwise>
+          <!-- SOFT DELETE (nascondi) per post pubblici -->
+          <form method="post"
+                action="${pageContext.request.contextPath}/admin/posts/hide"
+                class="inline"
+                onsubmit="return confirm('Nascondere questo post dalla community?');">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+            <input type="hidden" name="postId" value="${post._idStr}" />
+            <input type="text" name="reason" placeholder="Motivo (opzionale)" />
+            <button type="submit">👁 Nascondi</button>
+          </form>
+
+          <form method="post"
+                action="${pageContext.request.contextPath}/posts/delete"
+                class="inline"
+                onsubmit="return confirm('Eliminazione DEFINITIVA. Continuare?');">
+            <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
+            <input type="hidden" name="postId" value="${post._idStr}" />
+            <button type="submit" style="color:red">🗑 Elimina</button>
+          </form>
+        </c:otherwise>
+      </c:choose>
 
     </c:if>
+
 
     <!-- ================= TRAINER EVALUATION ================= -->
     <c:if test="${sessionScope.user.ruolo == 'PERSONALE'}">
