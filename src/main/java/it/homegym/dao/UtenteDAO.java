@@ -50,17 +50,15 @@ public class UtenteDAO {
         return list;
     }
 
-    /**
-     * Lista Utente (oggetti) dei clienti assegnati ad un trainer (esclude deleted).
-     */
-    public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
+    // Ritorna i clienti assegnati al trainer, INCLUDENDO anche quelli soft-deleted
+    public List<Utente> listClientsByTrainerIncludingDeleted(int trainerId) throws SQLException {
         List<Utente> list = new ArrayList<>();
         String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
-                     "FROM utente " +
-                     "WHERE trainer_id = ? AND (deleted = 0 OR deleted IS NULL) " +
-                     "ORDER BY id DESC";
+                    "FROM utente " +
+                    "WHERE trainer_id = ? " +
+                    "ORDER BY id DESC";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, trainerId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) list.add(mapRow(rs));
@@ -220,7 +218,7 @@ public class UtenteDAO {
         }
     }
 
-    // Ripristina un utente precedentemente soft-deleted (deleted = 0)
+    // Ripristina un utente soft-deleted (deleted = 0)
     public boolean restoreById(int id) throws SQLException {
         String sql = "UPDATE utente SET deleted = 0 WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
