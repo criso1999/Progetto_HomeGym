@@ -56,6 +56,8 @@ public class PostsViewServlet extends HttpServlet {
             return;
         }
 
+        HttpSession session = req.getSession(false);
+
         try {
             MongoCollection<Document> col = mongoDb.getCollection("posts");
             Document postDoc = null;
@@ -67,10 +69,18 @@ public class PostsViewServlet extends HttpServlet {
                 postDoc = col.find(eq("_id", id)).first();
             }
 
+            // se non trovato -> redirect con flash
             if (postDoc == null) {
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                req.setAttribute("error", "Post non trovato");
-                req.getRequestDispatcher("/WEB-INF/views/posts/view.jsp").forward(req, resp);
+                if (session != null) session.setAttribute("flashError", "Post non trovato.");
+                // redirect in base al ruolo se possibile
+                Utente sessUser = session != null ? (Utente) session.getAttribute("user") : null;
+                if (sessUser != null && "PERSONALE".equals(sessUser.getRuolo())) {
+                    resp.sendRedirect(req.getContextPath() + "/staff/community");
+                } else if (sessUser != null && "CLIENTE".equals(sessUser.getRuolo())) {
+                    resp.sendRedirect(req.getContextPath() + "/client/profile");
+                } else {
+                    resp.sendRedirect(req.getContextPath() + "/posts");
+                }
                 return;
             }
 
@@ -155,31 +165,40 @@ public class PostsViewServlet extends HttpServlet {
             }
 
             // --- AUTH / VISIBILITY RULES ---
-            HttpSession session = req.getSession(false);
             Utente user = session != null ? (Utente) session.getAttribute("user") : null;
 
-            // if hidden, only PROPRIETARIO can see -> otherwise 404
+            // ottieni author id robustamente (usato sotto)
+            Integer authorId = null;
+            Object maybeUid = postDoc.get("userId");
+            if (maybeUid instanceof Number) {
+                authorId = ((Number) maybeUid).intValue();
+            } else if (maybeUid != null) {
+                try { authorId = Integer.parseInt(maybeUid.toString()); } catch (NumberFormatException ignored) {}
+            }
+
+            // if hidden, allow only PROPRIETARIO or post author to view; otherwise redirect with flash
             if ("HIDDEN".equalsIgnoreCase(visibility)) {
-                if (user == null || !"PROPRIETARIO".equals(user.getRuolo())) {
-                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                boolean isAdmin = user != null && "PROPRIETARIO".equals(user.getRuolo());
+                boolean isAuthor = user != null && authorId != null && user.getId() == authorId;
+
+                if (!isAdmin && !isAuthor) {
+                    if (session != null) session.setAttribute("flashError", "Questo post è stato rimosso dalla community e non è visibile.");
+                    if (user != null && "PERSONALE".equals(user.getRuolo())) {
+                        resp.sendRedirect(req.getContextPath() + "/staff/community");
+                    } else if (user != null && "CLIENTE".equals(user.getRuolo())) {
+                        resp.sendRedirect(req.getContextPath() + "/client/profile");
+                    } else {
+                        resp.sendRedirect(req.getContextPath() + "/posts");
+                    }
                     return;
                 }
             }
 
-            // If logged-in is PERSONALE, allow view only for their assigned clients
+            // If logged-in is PERSONALE, allow view only for their assigned clients (redirect with flash if not allowed)
             if (user != null && "PERSONALE".equals(user.getRuolo())) {
-                // get post author id (robusto)
-                Integer authorId = null;
-                Object maybeUid = postDoc.get("userId");
-                if (maybeUid instanceof Number) {
-                    authorId = ((Number) maybeUid).intValue();
-                } else if (maybeUid != null) {
-                    try { authorId = Integer.parseInt(maybeUid.toString()); } catch (NumberFormatException ignored) {}
-                }
-
                 if (authorId == null) {
-                    // No author id -> deny
-                    resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    if (session != null) session.setAttribute("flashError", "Autore del post non valido.");
+                    resp.sendRedirect(req.getContextPath() + "/staff/community");
                     return;
                 }
 
@@ -187,11 +206,11 @@ public class PostsViewServlet extends HttpServlet {
                     UtenteDAO udao = new UtenteDAO();
                     List<Integer> clientIds = udao.listClientIdsByTrainer(user.getId());
                     if (clientIds == null || !clientIds.contains(authorId)) {
-                        resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                        if (session != null) session.setAttribute("flashError", "Non sei autorizzato a visualizzare questo post.");
+                        resp.sendRedirect(req.getContextPath() + "/staff/community");
                         return;
                     }
                 } catch (SQLException sqle) {
-                    // problem reading DB -> return error
                     throw new ServletException("Errore controllo autorizzazione trainer", sqle);
                 }
             }
