@@ -1,5 +1,6 @@
 package it.homegym.dao;
 
+import it.homegym.model.SessionBooking;
 import it.homegym.model.TrainingSession;
 import it.homegym.util.ConnectionPool;
 
@@ -44,18 +45,32 @@ public class SessionDAO {
         }
     }
 
-    public List<TrainingSession> listByUserId(int userId) throws SQLException {
-        String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
-                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
-                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
-                     "WHERE s.user_id = ? ORDER BY s.scheduled_at DESC";
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+     /**
+     * Lista le sessioni del client (userId) ordinate desc.
+     */
+    public List<SessionBooking> listByUserId(int userId) throws SQLException {
+        List<SessionBooking> out = new ArrayList<>();
+        String sql = "SELECT id, user_id, trainer, scheduled_at, duration_minutes, notes, created_at FROM session WHERE user_id = ? ORDER BY scheduled_at DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                return toListWithUser(rs);
+                while (rs.next()) {
+                    SessionBooking s = new SessionBooking();
+                    s.setId(rs.getInt("id"));
+                    int uid = rs.getInt("user_id");
+                    s.setUserId(rs.wasNull() ? null : uid);
+                    s.setTrainer(rs.getString("trainer"));
+                    s.setScheduledAt(rs.getTimestamp("scheduled_at"));
+                    int dm = rs.getInt("duration_minutes");
+                    s.setDurationMinutes(rs.wasNull() ? null : dm);
+                    s.setNotes(rs.getString("notes"));
+                    s.setCreatedAt(rs.getTimestamp("created_at"));
+                    out.add(s);
+                }
             }
         }
+        return out;
     }
 
     public TrainingSession findById(int id) throws SQLException {
@@ -81,22 +96,31 @@ public class SessionDAO {
         return null;
     }
 
-    public boolean create(TrainingSession s) throws SQLException {
+    /**
+     * Crea una sessione e ritorna l'id generato (o -1 se fallisce).
+     */
+    public int create(SessionBooking s) throws SQLException {
         String sql = "INSERT INTO session (user_id, trainer, scheduled_at, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)";
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
             if (s.getUserId() != null) ps.setInt(1, s.getUserId()); else ps.setNull(1, Types.INTEGER);
             ps.setString(2, s.getTrainer());
-            ps.setTimestamp(3, s.getWhen());
-            ps.setInt(4, s.getDurationMinutes());
+            ps.setTimestamp(3, s.getScheduledAt());
+            if (s.getDurationMinutes() != null) ps.setInt(4, s.getDurationMinutes()); else ps.setNull(4, Types.INTEGER);
             ps.setString(5, s.getNotes());
+
             int affected = ps.executeUpdate();
-            if (affected == 0) return false;
+            if (affected == 0) return -1;
             try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (keys.next()) s.setId(keys.getInt(1));
+                if (keys.next()) {
+                    int newId = keys.getInt(1);
+                    s.setId(newId);
+                    return newId;
+                }
             }
-            return true;
         }
+        return -1;
     }
 
     public boolean update(TrainingSession s) throws SQLException {

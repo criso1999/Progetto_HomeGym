@@ -55,6 +55,31 @@ public class PaymentDAO {
         return list;
     }
 
+    // Crea un nuovo pagamento e restituisce l'ID generato
+    public int create(Payment p) throws SQLException {
+        String sql = "INSERT INTO payment (user_id, amount, currency, status) VALUES (?, ?, ?, ?)";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+                PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            if (p.getUserId() != null) ps.setInt(1, p.getUserId()); else ps.setNull(1, Types.INTEGER);
+            ps.setBigDecimal(2, p.getAmount());
+            ps.setString(3, p.getCurrency());
+            ps.setString(4, p.getStatus());
+
+            int affected = ps.executeUpdate();
+            if (affected == 0) return -1;
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    int newId = keys.getInt(1);
+                    p.setId(newId);
+                    return newId;
+                }
+            }
+        }
+        return -1;
+    }
+
+
      public int countAll() throws SQLException {
         String sql = "SELECT COUNT(*) FROM payment";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
