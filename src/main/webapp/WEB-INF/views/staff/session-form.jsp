@@ -19,6 +19,13 @@
     <div class="error">${error}</div>
   </c:if>
 
+  <c:if test="${sessionScope.user.ruolo == 'PERSONALE' || sessionScope.user.ruolo == 'PROPRIETARIO'}">
+    <p>Genera QR per il check-in (scadenza 30 min):</p>
+    <img src="${pageContext.request.contextPath}/staff/sessions/qr?sessionId=${session.id}&expires=30" alt="QR check-in" />
+    <p class="small">Scansiona il QR per registrare la presenza.</p>
+  </c:if>
+
+
   <form id="sessionForm" method="post" action="${pageContext.request.contextPath}/staff/sessions/action">
     <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
 
