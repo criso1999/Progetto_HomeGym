@@ -127,6 +127,7 @@ public class PostsViewServlet extends HttpServlet {
                 }
             }
 
+            //--- Normalize trainerEvaluations and medias arrays ---
             Object evMaybe = postDoc.get("trainerEvaluations");
             if (!(evMaybe instanceof List)) {
                 postDoc.put("trainerEvaluations", new ArrayList<>());
@@ -142,6 +143,7 @@ public class PostsViewServlet extends HttpServlet {
                 }
             }
 
+            // Normalize medias array and fileId fields
             Object mdMaybe = postDoc.get("medias");
             if (!(mdMaybe instanceof List)) {
                 postDoc.put("medias", new ArrayList<>());
