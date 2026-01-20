@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 @WebServlet("/client/sessions/action")
 public class ClientSessionActionServlet extends HttpServlet {
@@ -55,26 +56,25 @@ public class ClientSessionActionServlet extends HttpServlet {
                     return;
                 }
 
-                // scheduled is in format yyyy-MM-dd'T'HH:mm
                 LocalDateTime ldt = LocalDateTime.parse(scheduled, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
-                Timestamp ts = Timestamp.valueOf(ldt);
+                Date scheduledDate = new Date(Timestamp.valueOf(ldt).getTime());
 
                 TrainingSession tsObj = new TrainingSession();
                 tsObj.setUserId(u.getId());
                 tsObj.setTrainer(trainer);
-                tsObj.setWhen(ts);
-                tsObj.setDurationMinutes(durationStr != null && !durationStr.isBlank() ? Integer.parseInt(durationStr) : 60);
+                tsObj.setWhen(scheduledDate);
+                Integer duration = null;
+                try { duration = Integer.parseInt(durationStr); } catch (Exception ignored) {}
+                tsObj.setDurationMinutes(duration);
                 tsObj.setNotes(notes);
 
                 sessionDAO.create(tsObj);
+
             } else if ("cancel".equals(action)) {
                 int id = Integer.parseInt(req.getParameter("id"));
-                // optional: verify ownership
                 TrainingSession existing = sessionDAO.findById(id);
                 if (existing != null && existing.getUserId() != null && existing.getUserId().equals(u.getId())) {
                     sessionDAO.delete(id);
-                } else {
-                    // ignore or throw
                 }
             }
             resp.sendRedirect(req.getContextPath() + "/client/sessions");

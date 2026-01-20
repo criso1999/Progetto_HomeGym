@@ -52,7 +52,7 @@ public class StaffSessionFormServlet extends HttpServlet {
                 if (s != null) {
                     req.setAttribute("session", s);
                     // prepara valore per input datetime-local (yyyy-MM-dd'T'HH:mm)
-                    Timestamp t = s.getWhen();
+                    Timestamp t = (Timestamp) s.getWhen();
                     if (t != null) {
                         LocalDateTime ldt = t.toLocalDateTime();
                         String formatted = ldt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));

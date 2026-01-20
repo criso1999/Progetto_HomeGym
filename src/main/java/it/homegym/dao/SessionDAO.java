@@ -1,11 +1,11 @@
 package it.homegym.dao;
 
-import it.homegym.model.SessionBooking;
 import it.homegym.model.TrainingSession;
 import it.homegym.util.ConnectionPool;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class SessionDAO {
@@ -16,14 +16,11 @@ public class SessionDAO {
         }
     }
 
-    /**
-     * Lista tutte le sessioni, con LEFT JOIN su utente per userName (se presente).
-     */
     public List<TrainingSession> listAll() throws SQLException {
         String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
-                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
-                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
-                     "ORDER BY s.scheduled_at DESC";
+                "s.trainer, s.scheduled_at, s.duration_minutes, s.notes, s.created_at " +
+                "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
+                "ORDER BY s.scheduled_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -33,9 +30,9 @@ public class SessionDAO {
 
     public List<TrainingSession> listByTrainer(String trainer) throws SQLException {
         String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
-                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
-                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
-                     "WHERE s.trainer = ? ORDER BY s.scheduled_at DESC";
+                "s.trainer, s.scheduled_at, s.duration_minutes, s.notes, s.created_at " +
+                "FROM session s LEFT JOIN utente u ON s.user_id = u.id " +
+                "WHERE s.trainer = ? ORDER BY s.scheduled_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, trainer);
@@ -45,27 +42,26 @@ public class SessionDAO {
         }
     }
 
-     /**
-     * Lista le sessioni del client (userId) ordinate desc.
-     */
-    public List<SessionBooking> listByUserId(int userId) throws SQLException {
-        List<SessionBooking> out = new ArrayList<>();
+    public List<TrainingSession> listByUserId(int userId) throws SQLException {
+        List<TrainingSession> out = new ArrayList<>();
         String sql = "SELECT id, user_id, trainer, scheduled_at, duration_minutes, notes, created_at FROM session WHERE user_id = ? ORDER BY scheduled_at DESC";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    SessionBooking s = new SessionBooking();
+                    TrainingSession s = new TrainingSession();
                     s.setId(rs.getInt("id"));
                     int uid = rs.getInt("user_id");
                     s.setUserId(rs.wasNull() ? null : uid);
                     s.setTrainer(rs.getString("trainer"));
-                    s.setScheduledAt(rs.getTimestamp("scheduled_at"));
+                    Timestamp scheduled = rs.getTimestamp("scheduled_at");
+                    if (scheduled != null) s.setWhen(new Date(scheduled.getTime()));
                     int dm = rs.getInt("duration_minutes");
                     s.setDurationMinutes(rs.wasNull() ? null : dm);
                     s.setNotes(rs.getString("notes"));
-                    s.setCreatedAt(rs.getTimestamp("created_at"));
+                    Timestamp ts = rs.getTimestamp("created_at");
+                    if (ts != null) s.setCreatedAt(new Date(ts.getTime()));
                     out.add(s);
                 }
             }
@@ -75,8 +71,8 @@ public class SessionDAO {
 
     public TrainingSession findById(int id) throws SQLException {
         String sql = "SELECT s.id, s.user_id, u.nome AS u_nome, u.cognome AS u_cognome, " +
-                     "s.trainer, s.scheduled_at, s.duration_minutes, s.notes " +
-                     "FROM session s LEFT JOIN utente u ON s.user_id = u.id WHERE s.id = ?";
+                "s.trainer, s.scheduled_at, s.duration_minutes, s.notes, s.created_at " +
+                "FROM session s LEFT JOIN utente u ON s.user_id = u.id WHERE s.id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -85,7 +81,7 @@ public class SessionDAO {
                     TrainingSession s = mapRow(rs);
                     String nome = rs.getString("u_nome");
                     String cognome = rs.getString("u_cognome");
-                    if (nome != null || cognome != null) {
+                    if ((nome != null && !nome.isBlank()) || (cognome != null && !cognome.isBlank())) {
                         String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
                         s.setUserName(full.trim());
                     }
@@ -96,17 +92,18 @@ public class SessionDAO {
         return null;
     }
 
-    /**
-     * Crea una sessione e ritorna l'id generato (o -1 se fallisce).
-     */
-    public int create(SessionBooking s) throws SQLException {
+    public int create(TrainingSession s) throws SQLException {
         String sql = "INSERT INTO session (user_id, trainer, scheduled_at, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             if (s.getUserId() != null) ps.setInt(1, s.getUserId()); else ps.setNull(1, Types.INTEGER);
             ps.setString(2, s.getTrainer());
-            ps.setTimestamp(3, s.getScheduledAt());
+            if (s.getWhen() != null) {
+                ps.setTimestamp(3, new Timestamp(s.getWhen().getTime()));
+            } else {
+                ps.setNull(3, Types.TIMESTAMP);
+            }
             if (s.getDurationMinutes() != null) ps.setInt(4, s.getDurationMinutes()); else ps.setNull(4, Types.INTEGER);
             ps.setString(5, s.getNotes());
 
@@ -129,8 +126,8 @@ public class SessionDAO {
              PreparedStatement ps = c.prepareStatement(sql)) {
             if (s.getUserId() != null) ps.setInt(1, s.getUserId()); else ps.setNull(1, Types.INTEGER);
             ps.setString(2, s.getTrainer());
-            ps.setTimestamp(3, s.getWhen());
-            ps.setInt(4, s.getDurationMinutes());
+            if (s.getWhen() != null) ps.setTimestamp(3, new Timestamp(s.getWhen().getTime())); else ps.setNull(3, Types.TIMESTAMP);
+            if (s.getDurationMinutes() != null) ps.setInt(4, s.getDurationMinutes()); else ps.setNull(4, Types.INTEGER);
             ps.setString(5, s.getNotes());
             ps.setInt(6, s.getId());
             return ps.executeUpdate() > 0;
@@ -146,15 +143,13 @@ public class SessionDAO {
         }
     }
 
-    /* ----- helper methods ----- */
-
     private List<TrainingSession> toListWithUser(ResultSet rs) throws SQLException {
         List<TrainingSession> list = new ArrayList<>();
         while (rs.next()) {
             TrainingSession s = mapRow(rs);
             String nome = rs.getString("u_nome");
             String cognome = rs.getString("u_cognome");
-            if (nome != null || cognome != null) {
+            if ((nome != null && !nome.isBlank()) || (cognome != null && !cognome.isBlank())) {
                 String full = ((nome != null) ? nome : "") + ((cognome != null && !cognome.isBlank()) ? " " + cognome : "");
                 s.setUserName(full.trim());
             }
@@ -169,9 +164,15 @@ public class SessionDAO {
         int uid = rs.getInt("user_id");
         s.setUserId(rs.wasNull() ? null : uid);
         s.setTrainer(rs.getString("trainer"));
-        s.setWhen(rs.getTimestamp("scheduled_at"));
-        s.setDurationMinutes(rs.getInt("duration_minutes"));
+        Timestamp scheduled = rs.getTimestamp("scheduled_at");
+        if (scheduled != null) s.setWhen(new Date(scheduled.getTime()));
+        int dm = rs.getInt("duration_minutes");
+        s.setDurationMinutes(rs.wasNull() ? null : dm);
         s.setNotes(rs.getString("notes"));
+        try {
+            Timestamp created = rs.getTimestamp("created_at");
+            if (created != null) s.setCreatedAt(new Date(created.getTime()));
+        } catch (SQLException ignored) {}
         return s;
     }
 }

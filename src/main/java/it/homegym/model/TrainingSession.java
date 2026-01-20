@@ -1,6 +1,6 @@
 package it.homegym.model;
 
-import java.sql.Timestamp;
+import java.util.Date;
 
 public class TrainingSession {
 
@@ -8,9 +8,10 @@ public class TrainingSession {
     private Integer userId;
     private String userName; // optional: populated via JOIN
     private String trainer;
-    private Timestamp when; // scheduled_at
-    private int durationMinutes;
+    private Date when; // scheduled_at (java.util.Date)
+    private Integer durationMinutes; // nullable
     private String notes;
+    private Date createdAt;
 
     public TrainingSession() {}
 
@@ -26,12 +27,29 @@ public class TrainingSession {
     public String getTrainer() { return trainer; }
     public void setTrainer(String trainer) { this.trainer = trainer; }
 
-    public Timestamp getWhen() { return when; }
-    public void setWhen(Timestamp when) { this.when = when; }
+    public Date getWhen() { return when; }
+    public void setWhen(Date when) { this.when = when; }
 
-    public int getDurationMinutes() { return durationMinutes; }
-    public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+
+    @Override
+    public String toString() {
+        return "TrainingSession{" +
+                "id=" + id +
+                ", userId=" + userId +
+                ", userName='" + userName + '\'' +
+                ", trainer='" + trainer + '\'' +
+                ", when=" + when +
+                ", durationMinutes=" + durationMinutes +
+                ", notes='" + notes + '\'' +
+                ", createdAt=" + createdAt +
+                '}';
+    }
 }

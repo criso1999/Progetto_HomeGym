@@ -56,12 +56,16 @@ public class StaffSessionsActionServlet extends HttpServlet {
 
         String scheduled = req.getParameter("scheduled_at"); // expected yyyy-MM-dd'T'HH:mm
         if (scheduled != null && !scheduled.isBlank()) {
-            LocalDateTime ldt = LocalDateTime.parse(scheduled, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            s.setWhen(Timestamp.valueOf(ldt));
+            LocalDateTime ldt = LocalDateTime.parse(scheduled, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+            s.setWhen(new java.util.Date(Timestamp.valueOf(ldt).getTime()));
         }
 
         String duration = req.getParameter("duration");
-        s.setDurationMinutes((duration != null && !duration.isBlank()) ? Integer.parseInt(duration) : 60);
+        if (duration != null && !duration.isBlank()) {
+            try { s.setDurationMinutes(Integer.parseInt(duration)); } catch (NumberFormatException ignored) { s.setDurationMinutes(null); }
+        } else {
+            s.setDurationMinutes(null);
+        }
 
         s.setNotes(req.getParameter("notes"));
         return s;
