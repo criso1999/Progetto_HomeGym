@@ -158,21 +158,32 @@ public class SessionDAO {
         return list;
     }
 
-    private TrainingSession mapRow(ResultSet rs) throws SQLException {
-        TrainingSession s = new TrainingSession();
-        s.setId(rs.getInt("id"));
-        int uid = rs.getInt("user_id");
-        s.setUserId(rs.wasNull() ? null : uid);
-        s.setTrainer(rs.getString("trainer"));
-        Timestamp scheduled = rs.getTimestamp("scheduled_at");
-        if (scheduled != null) s.setWhen(new Date(scheduled.getTime()));
-        int dm = rs.getInt("duration_minutes");
-        s.setDurationMinutes(rs.wasNull() ? null : dm);
-        s.setNotes(rs.getString("notes"));
-        try {
-            Timestamp created = rs.getTimestamp("created_at");
-            if (created != null) s.setCreatedAt(new Date(created.getTime()));
-        } catch (SQLException ignored) {}
-        return s;
-    }
+    // dentro SessionDAO.mapRow(ResultSet rs)
+private TrainingSession mapRow(ResultSet rs) throws SQLException {
+    TrainingSession s = new TrainingSession();
+    s.setId(rs.getInt("id"));
+    int uid = rs.getInt("user_id");
+    s.setUserId(rs.wasNull() ? null : uid);
+    s.setTrainer(rs.getString("trainer"));
+
+    // PRIMA: convertivi in java.util.Date -> causava mismatch
+    // Timestamp scheduled = rs.getTimestamp("scheduled_at");
+    // if (scheduled != null) s.setWhen(new java.util.Date(scheduled.getTime()));
+
+    // ORA: assegna direttamente il Timestamp (coerente con TrainingSession.when)
+    Timestamp scheduled = rs.getTimestamp("scheduled_at");
+    if (scheduled != null) s.setWhen(scheduled);
+
+    int dm = rs.getInt("duration_minutes");
+    s.setDurationMinutes(rs.wasNull() ? 0 : dm); // o usa Integer wrapper se vuoi nullable
+    s.setNotes(rs.getString("notes"));
+
+    try {
+        Timestamp created = rs.getTimestamp("created_at");
+        if (created != null) s.setCreatedAt(created);
+    } catch (SQLException ignored) {}
+
+    return s;
+}
+
 }

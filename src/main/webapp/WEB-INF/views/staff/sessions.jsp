@@ -66,7 +66,7 @@
               <td><c:out value="${s.notes}" /></td>
               <td class="actions">
                 <!-- link/azioni: view/edit/delete (da implementare lato servlet/DAO) -->
-                <a href="${pageContext.request.contextPath}/staff/sessions/view?id=${s.id}">View</a>
+                <!--a href="${pageContext.request.contextPath}/staff/sessions/view?id=${s.id}">View</a>-->
                 |
                 <a href="${pageContext.request.contextPath}/staff/sessions/edit?id=${s.id}">Edit</a>
                 |
