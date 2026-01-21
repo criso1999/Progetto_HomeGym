@@ -1,9 +1,18 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+
+<%-- recupera il token dalla sessione; il nome può variare a seconda della tua implementazione --%>
+<%-- qui uso sessionScope.csrfToken come esempio (adattalo se il tuo fragment lo mette con un altro nome) --%>
+
 <html><body>
 <h1><c:out value="${plan != null ? 'Modifica scheda' : 'Nuova scheda'}"/></h1>
 
-<form method="post" action="${pageContext.request.contextPath}/staff/plans/action" enctype="multipart/form-data">
+<form method="post"
+      action="${pageContext.request.contextPath}/staff/plans/action?csrf=${sessionScope.csrfToken}"
+      enctype="multipart/form-data">
+
+  <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>  <!-- => genera l'input hidden del token -->
+
   <input type="hidden" name="action" value="${plan != null ? 'update' : 'create'}"/>
   <c:if test="${plan != null}">
     <input type="hidden" name="id" value="${plan.id}"/>
@@ -15,16 +24,8 @@
 
   <!-- UPLOAD -->
   <label>Allega scheda (PDF / Excel):</label>
-  <input type="file" name="attachment" accept=".pdf,application/pdf,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-  <c:if test="${plan != null and not empty plan.attachmentFilename}">
-    <div>Allegato corrente: <a href="${pageContext.request.contextPath}/staff/plans/download?id=${plan.id}">${plan.attachmentFilename}</a>
-      ( <small>${plan.attachmentContentType}</small> )
-    </div>
-    <label><input type="checkbox" name="removeAttachment" value="1"/> Rimuovi allegato corrente</label>
-  </c:if>
-
-  <br/><br/>
+  <input type="file" name="attachment" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+  ...
   <button type="submit">Salva</button>
 </form>
-<p><a href="${pageContext.request.contextPath}/staff/plans">← Torna</a></p>
 </body></html>

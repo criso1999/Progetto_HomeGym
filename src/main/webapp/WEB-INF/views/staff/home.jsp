@@ -40,7 +40,7 @@
     <ul>
         <li><a href="<%=request.getContextPath()%>/staff/clients">Clienti</a></li>
         <li><a href="<%=request.getContextPath()%>/staff/sessions">Sessioni</a></li>
-        <li><a href="<%=request.getContextPath()%>/staff/plans/form">Schede Allenamento</a></li>
+        <li><a href="<%=request.getContextPath()%>/staff/plans">Schede Allenamento</a></li>
     </ul>
 </div>
 

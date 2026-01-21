@@ -228,6 +228,25 @@ public class UtenteDAO {
         }
     }
 
+        /**
+     * Ritorna i clienti (Utente) assegnati al trainer, escludendo quelli soft-deleted.
+     */
+    public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+                     "FROM utente " +
+                     "WHERE trainer_id = ? AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) " +
+                     "ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, trainerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        }
+        return list;
+    }
+
 
     // ---- helper ----
     private Utente mapRow(ResultSet rs) throws SQLException {
