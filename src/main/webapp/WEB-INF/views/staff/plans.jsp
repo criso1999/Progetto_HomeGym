@@ -17,6 +17,7 @@
 <h1>Schede di allenamento</h1>
 
 <p>
+  <!-- CORRETTO: punta al form per creare/modificare -->
   <a href="${pageContext.request.contextPath}/staff/plans/form">➕ Nuova scheda</a>
   &nbsp;|&nbsp;
   <a href="${pageContext.request.contextPath}/staff/home">← Torna</a>
@@ -67,6 +68,9 @@
               &nbsp;|&nbsp;
               <a href="${pageContext.request.contextPath}/staff/plans/form?id=${p.id}#upload">Carica allegato</a>
               &nbsp;|&nbsp;
+              <!-- CORRETTO: assegna per singolo piano (passa planId) -->
+              <a href="${pageContext.request.contextPath}/staff/plans/assign?planId=${p.id}">Assegna</a>
+              &nbsp;|&nbsp;
               <a href="${pageContext.request.contextPath}/staff/plans/history?id=${p.id}">Storico</a>
             </td>
           </tr>
@@ -75,7 +79,6 @@
     </c:choose>
   </tbody>
 </table>
-<li><a href="<%=request.getContextPath()%>/staff/plans/form">Nuova Scheda</a></li>
-<li><a href="<%=request.getContextPath()%>/staff/plans/assign">Assegna Scheda</a></li>
+
 </body>
 </html>
