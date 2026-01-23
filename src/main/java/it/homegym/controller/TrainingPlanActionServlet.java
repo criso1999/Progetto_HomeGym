@@ -155,6 +155,7 @@ public class TrainingPlanActionServlet extends HttpServlet {
 
         Collection<Part> parts = req.getParts();
         boolean anySaved = false;
+        StringBuilder errors = new StringBuilder();
         for (Part p : parts) {
             if (p.getName() == null) continue;
             if (p.getSubmittedFileName() == null) continue;
@@ -162,7 +163,7 @@ public class TrainingPlanActionServlet extends HttpServlet {
             // whitelist extensions
             String lower = filename.toLowerCase();
             if (!(lower.endsWith(".pdf") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))) {
-                session.setAttribute("flashError", "Solo PDF/Excel permessi. File ignorato: " + filename);
+                errors.append("Solo PDF/Excel permessi. File ignorato: ").append(filename).append(". ");
                 continue;
             }
             Path planDir = attachmentsBase.resolve(String.valueOf(planId));
@@ -171,11 +172,31 @@ public class TrainingPlanActionServlet extends HttpServlet {
             try (InputStream in = p.getInputStream()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             }
-            // registra nel DB (assumi metodo che salva path/file meta)
-            dao.addAttachment(planId, filename, "/uploads/training_plans/" + planId + "/" + target.getFileName().toString());
-            anySaved = true;
+
+            // salva meta e path nel DB (includendo size e contentType)
+            long size = p.getSize();
+            String contentType = p.getContentType();
+            String storedPath = "/uploads/training_plans/" + planId + "/" + target.getFileName().toString();
+
+            boolean savedToDb;
+            try {
+                savedToDb = dao.addAttachment(planId, filename, storedPath, size, contentType);
+            } catch (SQLException sqle) {
+                savedToDb = false;
+            }
+
+            if (savedToDb) {
+                anySaved = true;
+            } else {
+                errors.append("Errore registrazione DB per file: ").append(filename).append(". ");
+            }
         }
-        if (anySaved) session.setAttribute("flashSuccess", "Allegati caricati.");
-        else session.setAttribute("flashError", "Nessun allegato caricato.");
+
+        if (anySaved) {
+            session.setAttribute("flashSuccess", "Allegati caricati.");
+            if (errors.length() > 0) session.setAttribute("flashError", errors.toString());
+        } else {
+            session.setAttribute("flashError", errors.length() > 0 ? errors.toString() : "Nessun allegato caricato.");
+        }
     }
 }

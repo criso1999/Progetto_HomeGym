@@ -55,37 +55,52 @@ public class TrainingPlanDAO {
      * @return true se registrato correttamente (in attachment table o su training_plan)
      */
     public boolean addAttachment(int planId, String filename, String path, Long size, String contentType) throws SQLException {
-        // 1) prova insert in training_plan_attachment
-        String insertAttachSql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(insertAttachSql)) {
-            ps.setInt(1, planId);
-            ps.setString(2, filename);
-            ps.setString(3, path);
-            if (contentType != null) ps.setString(4, contentType); else ps.setNull(4, Types.VARCHAR);
-            if (size != null) ps.setLong(5, size); else ps.setNull(5, Types.BIGINT);
-            ps.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            // Se l'errore è dovuto alla tabella inesistente (code specifico dipende dal DB),
-            // facciamo fallback su aggiornamento training_plan (campi singolo attachment).
-            // Per sicurezza logghiamo il messaggio e procediamo al fallback.
-            // Non rilanciamo qui: gestiamo il fallback.
-            // (In produzione valuta di loggare l'exception con logger.)
+    // Prova: se esiste training_plan_attachment -> INSERT
+    try (Connection c = ConnectionPool.getDataSource().getConnection()) {
+        boolean attachmentTableExists = false;
+        try {
+            DatabaseMetaData md = c.getMetaData();
+            try (ResultSet trs = md.getTables(null, null, "training_plan_attachment", new String[] {"TABLE"})) {
+                if (trs.next()) attachmentTableExists = true;
+            }
+        } catch (SQLException metaEx) {
+            // metadati non disponibili -> consideriamo che la tabella possa non esistere
+            attachmentTableExists = false;
         }
 
-        // 2) fallback: aggiorna training_plan attachment_*
+        if (attachmentTableExists) {
+            String insertAttachSql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+            try (PreparedStatement ps = c.prepareStatement(insertAttachSql)) {
+                ps.setInt(1, planId);
+                ps.setString(2, filename);
+                ps.setString(3, path);
+                if (contentType != null) ps.setString(4, contentType); else ps.setNull(4, Types.VARCHAR);
+                if (size != null) ps.setLong(5, size); else ps.setNull(5, Types.BIGINT);
+                ps.executeUpdate();
+                return true;
+            } catch (SQLException insertEx) {
+                // Log esplicito per debug (sostituisci con logger nella tua app)
+                System.err.println("ERROR inserting into training_plan_attachment: " + insertEx.getMessage());
+                insertEx.printStackTrace();
+                // cadremo nel fallback a training_plan più sotto
+            }
+        } else {
+            System.err.println("Table training_plan_attachment not found - falling back to update training_plan");
+        }
+
+        // Fallback: aggiorna training_plan attachment_*
         String updatePlanSql = "UPDATE training_plan SET attachment_filename = ?, attachment_content_type = ?, attachment_path = ?, attachment_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-        try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(updatePlanSql)) {
-            ps.setString(1, filename);
-            if (contentType != null) ps.setString(2, contentType); else ps.setNull(2, Types.VARCHAR);
-            ps.setString(3, path);
-            if (size != null) ps.setLong(4, size); else ps.setNull(4, Types.BIGINT);
-            ps.setInt(5, planId);
-            return ps.executeUpdate() > 0;
+        try (PreparedStatement ps2 = c.prepareStatement(updatePlanSql)) {
+            ps2.setString(1, filename);
+            if (contentType != null) ps2.setString(2, contentType); else ps2.setNull(2, Types.VARCHAR);
+            ps2.setString(3, path);
+            if (size != null) ps2.setLong(4, size); else ps2.setNull(4, Types.BIGINT);
+            ps2.setInt(5, planId);
+            return ps2.executeUpdate() > 0;
         }
     }
+}
+
 
     // --- esistente (modificato leggermente) ------------------------------------
 
@@ -227,16 +242,47 @@ public class TrainingPlanDAO {
 
     // Get plan by id
     public TrainingPlan findById(int id) throws SQLException {
-        String sql = "SELECT id, title, description, content, created_by, created_at, updated_at, deleted, attachment_filename, attachment_content_type, attachment_path, attachment_size FROM training_plan WHERE id = ?";
+        String sql = "SELECT id, title, description, content, created_by, created_at, updated_at, deleted, "
+                + "attachment_filename, attachment_content_type, attachment_path, attachment_size "
+                + "FROM training_plan WHERE id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+            PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapPlan(rs);
+                if (rs.next()) {
+                    TrainingPlan p = mapPlan(rs);
+
+                    // --- PROVA A LEGGERE L'ULTIMO ATTACHMENT DALLA TABELLA training_plan_attachment (se presente)
+                    // Se la tabella non esiste o la query fallisce, la catch silenzia l'eccezione
+                    String attachSql = "SELECT filename, path, content_type, size "
+                                    + "FROM training_plan_attachment WHERE plan_id = ? "
+                                    + "ORDER BY uploaded_at DESC LIMIT 1";
+                    try (PreparedStatement aps = c.prepareStatement(attachSql)) {
+                        aps.setInt(1, id);
+                        try (ResultSet ars = aps.executeQuery()) {
+                            if (ars.next()) {
+                                // Se abbiamo un record più recente nella tabella degli attachment, usalo
+                                String aFilename = ars.getString("filename");
+                                String aPath = ars.getString("path");
+                                String aContentType = ars.getString("content_type");
+                                long aSize = ars.getLong("size");
+                                p.setAttachmentFilename(aFilename);
+                                p.setAttachmentPath(aPath);
+                                p.setAttachmentContentType(aContentType);
+                                p.setAttachmentSize(ars.wasNull() ? null : aSize);
+                            }
+                        }
+                    } catch (SQLException ignore) {
+                        // fallback silenzioso: se la tabella non esiste o altra condizione, restiamo con i campi già letti
+                    }
+
+                    return p;
+                }
             }
         }
         return null;
     }
+
 
     private TrainingPlan mapPlan(ResultSet rs) throws SQLException {
         TrainingPlan p = new TrainingPlan();

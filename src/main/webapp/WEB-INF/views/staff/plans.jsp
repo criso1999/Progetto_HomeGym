@@ -52,7 +52,9 @@
             <td class="small"><c:out value="${p.updatedAt}"/></td>
             <td>
               <c:if test="${not empty p.attachmentFilename}">
-                <a href="${pageContext.request.contextPath}/staff/plans/download?id=${p.id}"><c:out value="${p.attachmentFilename}"/></a>
+                <a href="${pageContext.request.contextPath}/staff/plans/download?id=${p.id}">
+                  <c:out value="${p.attachmentFilename}"/>
+                </a>
               </c:if>
             </td>
             <td class="actions">

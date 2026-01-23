@@ -53,10 +53,19 @@
       </c:choose>
     </div>
 
-    <!-- Allegato / download link (uso del servlet di download, URL codificati con c:url) -->
     <c:if test="${not empty plan.attachmentPath or not empty plan.attachmentFilename}">
       <div style="margin-top:10px">
         <strong>Allegato:</strong>
+
+        <c:choose>
+          <c:when test="${not empty plan.attachmentFilename}">
+            <c:set var="displayName" value="${plan.attachmentFilename}" />
+          </c:when>
+          <c:otherwise>
+            <c:set var="displayName" value="${plan.attachmentPath}" />
+          </c:otherwise>
+        </c:choose>
+
         <c:choose>
           <c:when test="${not empty sessionScope.user and sessionScope.user.ruolo == 'CLIENTE'}">
             <c:url var="downloadUrl" value="/client/plans/download">
@@ -66,19 +75,23 @@
               </c:if>
             </c:url>
             <a href="${downloadUrl}" target="_blank" rel="noopener noreferrer">
-              <c:out value="${plan.attachmentFilename != null ? plan.attachmentFilename : 'Scarica allegato'}"/>
+              <c:out value="${displayName}"/>
             </a>
           </c:when>
-
           <c:otherwise>
             <c:url var="downloadUrlStaff" value="/staff/plans/download">
               <c:param name="id" value="${plan.id}" />
             </c:url>
             <a href="${downloadUrlStaff}" target="_blank" rel="noopener noreferrer">
-              <c:out value="${plan.attachmentFilename != null ? plan.attachmentFilename : 'Scarica allegato'}"/>
+              <c:out value="${displayName}"/>
             </a>
           </c:otherwise>
         </c:choose>
+
+        <c:if test="${not empty plan.attachmentPath}">
+          &nbsp;|&nbsp;
+          <a href="${pageContext.request.contextPath}${plan.attachmentPath}" target="_blank" rel="noopener noreferrer">(apri percorso)</a>
+        </c:if>
       </div>
     </c:if>
 

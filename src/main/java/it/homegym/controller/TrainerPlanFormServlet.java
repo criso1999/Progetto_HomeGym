@@ -66,6 +66,6 @@ public class TrainerPlanFormServlet extends HttpServlet {
             }
         }
 
-        req.getRequestDispatcher("/WEB-INF/views/staff/plans.jsp").forward(req, resp);
+        req.getRequestDispatcher("/WEB-INF/views/staff/plan-form.jsp").forward(req, resp);
     }
 }
