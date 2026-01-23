@@ -3,20 +3,23 @@ package it.homegym.dao;
 import it.homegym.model.TrainingPlan;
 import it.homegym.model.TrainingPlanVersion;
 import it.homegym.model.TrainingPlanAssignment;
+import it.homegym.model.TrainingPlanAttachment;
 import it.homegym.util.ConnectionPool;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * DAO per training_plan, training_plan_version, training_plan_assignment.
- * Aggiornato con metodi compatibili:
- *  - create(TrainingPlan) -> wrapper su createPlan
- *  - softDelete(int) -> wrapper su softDeletePlan
- *  - addAttachment(...) -> registra allegati (prova tabella training_plan_attachment, altrimenti fallback su training_plan)
+ * Aggiornato addAttachment con detection robusta della tabella training_plan_attachment
+ * e logging dettagliato per facilitare il debug quando la tabella non viene popolata.
  */
 public class TrainingPlanDAO {
+
+    private static final Logger LOG = Logger.getLogger(TrainingPlanDAO.class.getName());
 
     public TrainingPlanDAO() {
         if (ConnectionPool.getDataSource() == null) throw new IllegalStateException("DataSource non inizializzato");
@@ -55,52 +58,94 @@ public class TrainingPlanDAO {
      * @return true se registrato correttamente (in attachment table o su training_plan)
      */
     public boolean addAttachment(int planId, String filename, String path, Long size, String contentType) throws SQLException {
-    // Prova: se esiste training_plan_attachment -> INSERT
-    try (Connection c = ConnectionPool.getDataSource().getConnection()) {
-        boolean attachmentTableExists = false;
+        try (Connection c = ConnectionPool.getDataSource().getConnection()) {
+            // Proviamo a vedere se esiste la tabella training_plan_attachment.
+            boolean attachmentTableExists = tableExists(c, "training_plan_attachment");
+            if (attachmentTableExists) {
+                // Proviamo a fare INSERT nella tabella attachment.
+                String insertAttachSql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+                try (PreparedStatement ps = c.prepareStatement(insertAttachSql)) {
+                    ps.setInt(1, planId);
+                    ps.setString(2, filename);
+                    ps.setString(3, path);
+                    if (contentType != null) ps.setString(4, contentType); else ps.setNull(4, Types.VARCHAR);
+                    if (size != null) ps.setLong(5, size); else ps.setNull(5, Types.BIGINT);
+                    int affected = ps.executeUpdate();
+                    if (affected > 0) {
+                        LOG.log(Level.INFO, "Inserito attachment su training_plan_attachment: planId={0}, file={1}", new Object[]{planId, filename});
+                        return true;
+                    } else {
+                        LOG.log(Level.WARNING, "INSERT in training_plan_attachment non ha inserito righe: planId={0}, file={1}", new Object[]{planId, filename});
+                    }
+                } catch (SQLException insertEx) {
+                    // Se fallisce l'insert, logghiamo e procediamo al fallback.
+                    LOG.log(Level.WARNING, "Errore INSERT in training_plan_attachment: {0}", insertEx.getMessage());
+                    LOG.log(Level.FINE, "Dettaglio SQLException:", insertEx);
+                    // non rilanciamo subito: proviamo fallback su training_plan
+                }
+            } else {
+                LOG.log(Level.INFO, "Tabella training_plan_attachment non trovata: fallback su training_plan (planId={0})", planId);
+            }
+
+            // Fallback: aggiorna training_plan attachment_*
+            String updatePlanSql = "UPDATE training_plan SET attachment_filename = ?, attachment_content_type = ?, attachment_path = ?, attachment_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+            try (PreparedStatement ps2 = c.prepareStatement(updatePlanSql)) {
+                ps2.setString(1, filename);
+                if (contentType != null) ps2.setString(2, contentType); else ps2.setNull(2, Types.VARCHAR);
+                ps2.setString(3, path);
+                if (size != null) ps2.setLong(4, size); else ps2.setNull(4, Types.BIGINT);
+                ps2.setInt(5, planId);
+                int updated = ps2.executeUpdate();
+                if (updated > 0) {
+                    LOG.log(Level.INFO, "Aggiornati campi attachment in training_plan per planId={0}, file={1}", new Object[]{planId, filename});
+                    return true;
+                } else {
+                    LOG.log(Level.WARNING, "UPDATE training_plan non ha aggiornato righe per planId={0}", planId);
+                }
+            } catch (SQLException updateEx) {
+                LOG.log(Level.SEVERE, "Errore UPDATE training_plan per planId={0}: {1}", new Object[]{planId, updateEx.getMessage()});
+                LOG.log(Level.FINE, "Dettaglio SQLException:", updateEx);
+                throw updateEx; // non riuscito fallback => segnaliamo l'errore
+            }
+        }
+
+        // se arriviamo qui, non è stato possibile registrare l'allegato
+        return false;
+    }
+
+    /**
+     * Verifica se una tabella esiste nel DB in modo robusto: prova il nome così com'è,
+     * poi in uppercase e lowercase (alcuni DB memorizzano nomi in uppercase).
+     */
+    private boolean tableExists(Connection c, String tableName) {
         try {
             DatabaseMetaData md = c.getMetaData();
-            try (ResultSet trs = md.getTables(null, null, "training_plan_attachment", new String[] {"TABLE"})) {
-                if (trs.next()) attachmentTableExists = true;
+            // Proviamo esatto, uppercase e lowercase.
+            String[] trials = new String[] { tableName, tableName.toUpperCase(), tableName.toLowerCase() };
+            for (String t : trials) {
+                try (ResultSet rs = md.getTables(null, null, t, new String[] {"TABLE"})) {
+                    if (rs.next()) {
+                        LOG.log(Level.FINE, "Trovata tabella con nome: {0}", t);
+                        return true;
+                    }
+                }
             }
-        } catch (SQLException metaEx) {
-            // metadati non disponibili -> consideriamo che la tabella possa non esistere
-            attachmentTableExists = false;
-        }
-
-        if (attachmentTableExists) {
-            String insertAttachSql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-            try (PreparedStatement ps = c.prepareStatement(insertAttachSql)) {
-                ps.setInt(1, planId);
-                ps.setString(2, filename);
-                ps.setString(3, path);
-                if (contentType != null) ps.setString(4, contentType); else ps.setNull(4, Types.VARCHAR);
-                if (size != null) ps.setLong(5, size); else ps.setNull(5, Types.BIGINT);
-                ps.executeUpdate();
-                return true;
-            } catch (SQLException insertEx) {
-                // Log esplicito per debug (sostituisci con logger nella tua app)
-                System.err.println("ERROR inserting into training_plan_attachment: " + insertEx.getMessage());
-                insertEx.printStackTrace();
-                // cadremo nel fallback a training_plan più sotto
+            // Alcuni DB richiedono il catalog/schema; proviamo pattern con %
+            try (ResultSet rs2 = md.getTables(null, "%", "%" + tableName + "%", new String[] {"TABLE"})) {
+                while (rs2.next()) {
+                    String found = rs2.getString("TABLE_NAME");
+                    if (found != null && found.toLowerCase().contains(tableName.toLowerCase())) {
+                        LOG.log(Level.FINE, "Trovata tabella (pattern) TABLE_NAME={0}", found);
+                        return true;
+                    }
+                }
             }
-        } else {
-            System.err.println("Table training_plan_attachment not found - falling back to update training_plan");
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "Impossibile leggere DatabaseMetaData: {0}", e.getMessage());
+            LOG.log(Level.FINER, "Dettaglio SQLException:", e);
         }
-
-        // Fallback: aggiorna training_plan attachment_*
-        String updatePlanSql = "UPDATE training_plan SET attachment_filename = ?, attachment_content_type = ?, attachment_path = ?, attachment_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-        try (PreparedStatement ps2 = c.prepareStatement(updatePlanSql)) {
-            ps2.setString(1, filename);
-            if (contentType != null) ps2.setString(2, contentType); else ps2.setNull(2, Types.VARCHAR);
-            ps2.setString(3, path);
-            if (size != null) ps2.setLong(4, size); else ps2.setNull(4, Types.BIGINT);
-            ps2.setInt(5, planId);
-            return ps2.executeUpdate() > 0;
-        }
+        return false;
     }
-}
-
 
     // --- esistente (modificato leggermente) ------------------------------------
 
@@ -141,6 +186,87 @@ public class TrainingPlanDAO {
             ps.executeUpdate();
         }
     }
+
+    // inserisci e ritorna id dell'attachment (o -1 se fallisce)
+    public int insertAttachment(int planId, String filename, String path, Long size, String contentType, Integer uploadedBy) throws SQLException {
+        String sql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at, uploaded_by) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, planId);
+            ps.setString(2, filename);
+            ps.setString(3, path);
+            if (contentType != null) ps.setString(4, contentType); else ps.setNull(4, Types.VARCHAR);
+            if (size != null) ps.setLong(5, size); else ps.setNull(5, Types.BIGINT);
+            if (uploadedBy != null) ps.setInt(6, uploadedBy); else ps.setNull(6, Types.INTEGER);
+
+            int affected = ps.executeUpdate();
+            if (affected == 0) return -1;
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+            }
+        }
+        return -1;
+    }
+
+    // lista attachments per plan (più recente prima)
+    public List<TrainingPlanAttachment> listAttachmentsForPlan(int planId) throws SQLException {
+        List<TrainingPlanAttachment> out = new ArrayList<>();
+        String sql = "SELECT id, plan_id, filename, path, content_type, size, uploaded_at, uploaded_by FROM training_plan_attachment WHERE plan_id = ? ORDER BY uploaded_at DESC";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, planId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    TrainingPlanAttachment a = new TrainingPlanAttachment();
+                    a.setId(rs.getInt("id"));
+                    a.setPlanId(rs.getInt("plan_id"));
+                    a.setFilename(rs.getString("filename"));
+                    a.setPath(rs.getString("path"));
+                    a.setContentType(rs.getString("content_type"));
+                    long s = rs.getLong("size"); a.setSize(rs.wasNull() ? null : s);
+                    Timestamp t = rs.getTimestamp("uploaded_at"); if (t != null) a.setUploadedAt(new java.util.Date(t.getTime()));
+                    int ub = rs.getInt("uploaded_by"); a.setUploadedBy(rs.wasNull() ? null : ub);
+                    out.add(a);
+                }
+            }
+        }
+        return out;
+    }
+
+    // ritorna l'ultimo attachment (o null)
+    public TrainingPlanAttachment findLatestAttachmentForPlan(int planId) throws SQLException {
+        String sql = "SELECT id, plan_id, filename, path, content_type, size, uploaded_at, uploaded_by FROM training_plan_attachment WHERE plan_id = ? ORDER BY uploaded_at DESC LIMIT 1";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, planId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    TrainingPlanAttachment a = new TrainingPlanAttachment();
+                    a.setId(rs.getInt("id"));
+                    a.setPlanId(rs.getInt("plan_id"));
+                    a.setFilename(rs.getString("filename"));
+                    a.setPath(rs.getString("path"));
+                    a.setContentType(rs.getString("content_type"));
+                    long s = rs.getLong("size"); a.setSize(rs.wasNull() ? null : s);
+                    Timestamp t = rs.getTimestamp("uploaded_at"); if (t != null) a.setUploadedAt(new java.util.Date(t.getTime()));
+                    int ub = rs.getInt("uploaded_by"); a.setUploadedBy(rs.wasNull() ? null : ub);
+                    return a;
+                }
+            }
+        }
+        return null;
+    }
+
+    // opzionale: elimina attachment
+    public boolean deleteAttachmentById(int attachmentId) throws SQLException {
+        String sql = "DELETE FROM training_plan_attachment WHERE id = ?";
+        try (Connection c = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, attachmentId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
 
     // Update plan -> save previous state into version table (increment version)
     public boolean updatePlan(TrainingPlan p, int editorId) throws SQLException {
@@ -246,22 +372,18 @@ public class TrainingPlanDAO {
                 + "attachment_filename, attachment_content_type, attachment_path, attachment_size "
                 + "FROM training_plan WHERE id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql)) {
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     TrainingPlan p = mapPlan(rs);
 
                     // --- PROVA A LEGGERE L'ULTIMO ATTACHMENT DALLA TABELLA training_plan_attachment (se presente)
-                    // Se la tabella non esiste o la query fallisce, la catch silenzia l'eccezione
-                    String attachSql = "SELECT filename, path, content_type, size "
-                                    + "FROM training_plan_attachment WHERE plan_id = ? "
-                                    + "ORDER BY uploaded_at DESC LIMIT 1";
+                    String attachSql = "SELECT filename, path, content_type, size FROM training_plan_attachment WHERE plan_id = ? ORDER BY uploaded_at DESC LIMIT 1";
                     try (PreparedStatement aps = c.prepareStatement(attachSql)) {
                         aps.setInt(1, id);
                         try (ResultSet ars = aps.executeQuery()) {
                             if (ars.next()) {
-                                // Se abbiamo un record più recente nella tabella degli attachment, usalo
                                 String aFilename = ars.getString("filename");
                                 String aPath = ars.getString("path");
                                 String aContentType = ars.getString("content_type");
@@ -273,7 +395,7 @@ public class TrainingPlanDAO {
                             }
                         }
                     } catch (SQLException ignore) {
-                        // fallback silenzioso: se la tabella non esiste o altra condizione, restiamo con i campi già letti
+                        LOG.log(Level.FINE, "Unable to read training_plan_attachment for plan {0}: {1}", new Object[]{id, ignore.getMessage()});
                     }
 
                     return p;
@@ -282,7 +404,6 @@ public class TrainingPlanDAO {
         }
         return null;
     }
-
 
     private TrainingPlan mapPlan(ResultSet rs) throws SQLException {
         TrainingPlan p = new TrainingPlan();
@@ -392,8 +513,8 @@ public class TrainingPlanDAO {
         List<TrainingPlan> out = new ArrayList<>();
         String sql = "SELECT id, title, description, content, created_by, created_at, updated_at, deleted, attachment_filename, attachment_content_type, attachment_path, attachment_size FROM training_plan ORDER BY updated_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 out.add(mapPlan(rs));
             }

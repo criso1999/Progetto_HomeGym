@@ -12,6 +12,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @WebServlet("/staff/plans/action")
 @MultipartConfig(
@@ -20,6 +22,8 @@ import java.util.Collection;
     maxRequestSize = 1024 * 1024 * 50 // 50MB total
 )
 public class TrainingPlanActionServlet extends HttpServlet {
+
+    private static final Logger logger = Logger.getLogger(TrainingPlanActionServlet.class.getName());
 
     private TrainingPlanDAO dao;
     // path base dove salvare gli allegati (configurabile via env)
@@ -156,21 +160,39 @@ public class TrainingPlanActionServlet extends HttpServlet {
         Collection<Part> parts = req.getParts();
         boolean anySaved = false;
         StringBuilder errors = new StringBuilder();
+
         for (Part p : parts) {
-            if (p.getName() == null) continue;
-            if (p.getSubmittedFileName() == null) continue;
-            String filename = Paths.get(p.getSubmittedFileName()).getFileName().toString();
+            // Considera solo i part con file (submittedFileName non null)
+            if (p == null) continue;
+            String submitted = p.getSubmittedFileName();
+            if (submitted == null || submitted.isBlank()) continue;
+
+            String filename = Paths.get(submitted).getFileName().toString();
             // whitelist extensions
             String lower = filename.toLowerCase();
             if (!(lower.endsWith(".pdf") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))) {
                 errors.append("Solo PDF/Excel permessi. File ignorato: ").append(filename).append(". ");
                 continue;
             }
+
             Path planDir = attachmentsBase.resolve(String.valueOf(planId));
-            Files.createDirectories(planDir);
+            try {
+                Files.createDirectories(planDir);
+            } catch (IOException ioe) {
+                String msg = "Impossibile creare cartella piano per upload: " + planDir + " -> " + ioe.getMessage();
+                logger.log(Level.SEVERE, msg, ioe);
+                errors.append(msg).append(" ");
+                continue;
+            }
+
             Path target = planDir.resolve(System.currentTimeMillis() + "_" + filename);
             try (InputStream in = p.getInputStream()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException ioe) {
+                String msg = "Errore durante salvataggio file " + filename + ": " + ioe.getMessage();
+                logger.log(Level.SEVERE, msg, ioe);
+                errors.append(msg).append(" ");
+                continue;
             }
 
             // salva meta e path nel DB (includendo size e contentType)
@@ -178,17 +200,23 @@ public class TrainingPlanActionServlet extends HttpServlet {
             String contentType = p.getContentType();
             String storedPath = "/uploads/training_plans/" + planId + "/" + target.getFileName().toString();
 
-            boolean savedToDb;
+            boolean savedToDb = false;
             try {
                 savedToDb = dao.addAttachment(planId, filename, storedPath, size, contentType);
             } catch (SQLException sqle) {
+                String msg = "Errore DB durante registrazione allegato " + filename + ": " + sqle.getMessage();
+                logger.log(Level.SEVERE, msg, sqle);
+                errors.append(msg).append(" ");
                 savedToDb = false;
             }
 
             if (savedToDb) {
                 anySaved = true;
+                logger.log(Level.INFO, "Allegato registrato: planId={0}, file={1}", new Object[]{planId, filename});
             } else {
+                // se non salvato nel DB, manteniamo il file su disco (per debugging) ma segnaliamo l'errore
                 errors.append("Errore registrazione DB per file: ").append(filename).append(". ");
+                logger.log(Level.WARNING, "File salvato su disco ma non registrato in DB: {0} (plan {1})", new Object[]{target, planId});
             }
         }
 
