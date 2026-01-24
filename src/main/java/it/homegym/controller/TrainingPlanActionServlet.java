@@ -142,7 +142,6 @@ public class TrainingPlanActionServlet extends HttpServlet {
     }
 
     private void handleUpload(HttpServletRequest req, HttpSession session, Utente user) throws Exception {
-        // expected param: planId
         String idS = req.getParameter("planId");
         if (idS == null || idS.isBlank()) {
             session.setAttribute("flashError", "ID piano mancante per upload.");
@@ -157,18 +156,34 @@ public class TrainingPlanActionServlet extends HttpServlet {
             return;
         }
 
-        Collection<Part> parts = req.getParts();
         boolean anySaved = false;
         StringBuilder errors = new StringBuilder();
 
-        for (Part p : parts) {
-            // Considera solo i part con file (submittedFileName non null)
-            if (p == null) continue;
-            String submitted = p.getSubmittedFileName();
-            if (submitted == null || submitted.isBlank()) continue;
+        // Primo tentativo: singolo file input "attachment"
+        Part part = null;
+        try {
+            part = req.getPart("attachment");
+        } catch (IllegalStateException | IOException | ServletException ignore) {
+            part = null;
+        }
 
-            String filename = Paths.get(submitted).getFileName().toString();
-            // whitelist extensions
+        Collection<Part> parts = null;
+        if (part == null) {
+            // fallback: prendi tutti i part e filtra quelli con filename
+            parts = req.getParts();
+        }
+
+        // helper lambda-like behaviour (Java 8+: use loops)
+        if (part != null) {
+            parts = java.util.Collections.singletonList(part);
+        }
+
+        for (Part p : parts) {
+            if (p == null) continue;
+            String submittedName = p.getSubmittedFileName();
+            if (submittedName == null || submittedName.isBlank()) continue;
+
+            String filename = Paths.get(submittedName).getFileName().toString();
             String lower = filename.toLowerCase();
             if (!(lower.endsWith(".pdf") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))) {
                 errors.append("Solo PDF/Excel permessi. File ignorato: ").append(filename).append(". ");
@@ -176,26 +191,15 @@ public class TrainingPlanActionServlet extends HttpServlet {
             }
 
             Path planDir = attachmentsBase.resolve(String.valueOf(planId));
-            try {
-                Files.createDirectories(planDir);
-            } catch (IOException ioe) {
-                String msg = "Impossibile creare cartella piano per upload: " + planDir + " -> " + ioe.getMessage();
-                logger.log(Level.SEVERE, msg, ioe);
-                errors.append(msg).append(" ");
-                continue;
-            }
-
+            Files.createDirectories(planDir);
             Path target = planDir.resolve(System.currentTimeMillis() + "_" + filename);
             try (InputStream in = p.getInputStream()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException ioe) {
-                String msg = "Errore durante salvataggio file " + filename + ": " + ioe.getMessage();
-                logger.log(Level.SEVERE, msg, ioe);
-                errors.append(msg).append(" ");
+                errors.append("Errore salvataggio file: ").append(filename).append(". ");
                 continue;
             }
 
-            // salva meta e path nel DB (includendo size e contentType)
             long size = p.getSize();
             String contentType = p.getContentType();
             String storedPath = "/uploads/training_plans/" + planId + "/" + target.getFileName().toString();
@@ -204,19 +208,34 @@ public class TrainingPlanActionServlet extends HttpServlet {
             try {
                 savedToDb = dao.addAttachment(planId, filename, storedPath, size, contentType);
             } catch (SQLException sqle) {
-                String msg = "Errore DB durante registrazione allegato " + filename + ": " + sqle.getMessage();
-                logger.log(Level.SEVERE, msg, sqle);
-                errors.append(msg).append(" ");
+                // log per debug
+                log("Errore addAttachment: " + sqle.getMessage(), sqle);
                 savedToDb = false;
             }
 
-            if (savedToDb) {
-                anySaved = true;
-                logger.log(Level.INFO, "Allegato registrato: planId={0}, file={1}", new Object[]{planId, filename});
-            } else {
-                // se non salvato nel DB, manteniamo il file su disco (per debugging) ma segnaliamo l'errore
-                errors.append("Errore registrazione DB per file: ").append(filename).append(". ");
-                logger.log(Level.WARNING, "File salvato su disco ma non registrato in DB: {0} (plan {1})", new Object[]{target, planId});
+            // Aggiorna comunque i campi della tabella training_plan per garantire visibilità lato UI
+            try {
+                TrainingPlan toUpdate = dao.findById(planId);
+                if (toUpdate != null) {
+                    toUpdate.setAttachmentFilename(filename);
+                    toUpdate.setAttachmentPath(storedPath);
+                    toUpdate.setAttachmentContentType(contentType);
+                    toUpdate.setAttachmentSize(size);
+                    dao.update(toUpdate); // aggiorna i campi attachment_*
+                }
+            } catch (SQLException e) {
+                log("Errore aggiornamento training_plan attachment fields: " + e.getMessage(), e);
+                // non blocchiamo l'upload; segnaliamo comunque l'errore
+                errors.append("Errore registrazione meta su training_plan per file: ").append(filename).append(". ");
+            }
+
+            if (savedToDb) anySaved = true;
+            else {
+                // se addAttachment non ha inserito in training_plan_attachment, ma abbiamo aggiornato training_plan, consideriamo comunque salvato
+                if (anySaved == false) {
+                    // anySaved rimane false finché non incontriamo un savedToDb === true,
+                    // ma la presenza di aggiornamento a training_plan è stata tentata sopra indipendentemente.
+                }
             }
         }
 
@@ -224,7 +243,14 @@ public class TrainingPlanActionServlet extends HttpServlet {
             session.setAttribute("flashSuccess", "Allegati caricati.");
             if (errors.length() > 0) session.setAttribute("flashError", errors.toString());
         } else {
-            session.setAttribute("flashError", errors.length() > 0 ? errors.toString() : "Nessun allegato caricato.");
+            // se non abbiamo scritto su attachment table ma l'update training_plan è andato a buon fine,
+            // potremmo comunque desiderare segnalarlo come successo; decide tu come preferisci.
+            if (errors.length() > 0) {
+                session.setAttribute("flashError", errors.toString());
+            } else {
+                session.setAttribute("flashError", "Nessun allegato caricato.");
+            }
         }
     }
+
 }
