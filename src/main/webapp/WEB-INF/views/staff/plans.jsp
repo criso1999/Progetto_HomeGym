@@ -70,7 +70,7 @@
               &nbsp;|&nbsp;
               <a href="${pageContext.request.contextPath}/staff/plans/form?id=${p.id}#upload">Carica allegato</a>
               &nbsp;|&nbsp;
-              <!-- CORRETTO: assegna per singolo piano (passa planId) -->
+              
               <a href="${pageContext.request.contextPath}/staff/plans/assign?planId=${p.id}">Assegna</a>
               &nbsp;|&nbsp;
               <a href="${pageContext.request.contextPath}/staff/plans/history?id=${p.id}">Storico</a>

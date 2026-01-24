@@ -50,6 +50,7 @@ services:
     env_file:
       - .env                # <-- carica qui le variabili sensibili/config
     environment:
+      UPLOAD_DIR: "/uploads"
       # DB (possono venire anche dal .env)
       DB_HOST: "${DB_HOST:-db}"
       DB_PORT: "${DB_PORT:-3306}"
@@ -80,6 +81,7 @@ services:
       MONGO_DB: "${MONGO_DB:-homegym_mongo}"
     volumes:
       - ./logs:/usr/local/tomcat/logs
+      - ./homegym_uploads:/uploads
     restart: unless-stopped
 
   adminer:

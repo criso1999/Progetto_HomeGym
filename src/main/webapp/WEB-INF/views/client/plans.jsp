@@ -73,7 +73,7 @@
               <c:if test="${not empty plan}">
                 <a href="${pageContext.request.contextPath}/client/plans/view?planId=${plan.id}&assignmentId=${a.id}">Visualizza scheda</a>
                 &nbsp;|&nbsp;
-                <a href="${pageContext.request.contextPath}/staff/plans/history?id=${plan.id}">Storico</a>
+                
               </c:if>
             </td>
           </tr>
