@@ -207,6 +207,9 @@ public class TrainingPlanActionServlet extends HttpServlet {
             boolean savedToDb = false;
             try {
                 savedToDb = dao.addAttachment(planId, filename, storedPath, size, contentType);
+                logger.info("Saved file on disk: " + target.toString() + " (size=" + size + ", type=" + contentType + ")");
+                logger.info("Attempting to persist attachment metadata DB for planId=" + planId + " filename=" + filename + " storedPath=" + storedPath + " savedToDb=" + savedToDb);
+
             } catch (SQLException sqle) {
                 // log per debug
                 log("Errore addAttachment: " + sqle.getMessage(), sqle);

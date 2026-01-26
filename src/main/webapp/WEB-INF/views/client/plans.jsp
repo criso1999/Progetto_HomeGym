@@ -68,7 +68,11 @@
 
             <td class="actions">
               <c:if test="${not empty plan and not empty plan.attachmentPath}">
-                <a href="${pageContext.request.contextPath}${plan.attachmentPath}" target="_blank">Scarica allegato</a>
+                <c:url var="dl" value="/client/plans/download">
+                  <c:param name="planId" value="${plan.id}" />
+                  <c:param name="assignmentId" value="${a.id}" />
+                </c:url>
+                <a href="${pageContext.request.contextPath}${dl}" target="_blank" rel="noopener">Scarica allegato</a>
               </c:if>
               <c:if test="${not empty plan}">
                 <a href="${pageContext.request.contextPath}/client/plans/view?planId=${plan.id}&assignmentId=${a.id}">Visualizza scheda</a>
