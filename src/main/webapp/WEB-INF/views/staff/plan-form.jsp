@@ -11,6 +11,7 @@
     .flash-success { color: green; margin-bottom: 8px; }
     .flash-error { color: red; margin-bottom: 8px; }
     .attachment { margin: 12px 0; }
+    label { display:block; margin:8px 0; }
   </style>
 </head>
 <body>
@@ -26,45 +27,49 @@
   <c:remove var="flashError" scope="session"/>
 </c:if>
 
-<!-- Se la scheda esiste, mostro info e form upload -->
-<c:if test="${plan != null}">
-  <div>
-    <strong>ID:</strong> <c:out value="${plan.id}"/> &nbsp;
-    <strong>Titolo:</strong> <c:out value="${plan.title}"/>
-  </div>
+<form method="post"
+      action="${pageContext.request.contextPath}/staff/plans/action"
+      enctype="multipart/form-data">
+  <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
 
-  <c:if test="${not empty plan.attachmentFilename}">
-    <div class="attachment">
-      <strong>Allegato corrente:</strong>
-      <a href="${pageContext.request.contextPath}/staff/plans/download?id=${plan.id}" target="_blank">
-        <c:out value="${plan.attachmentFilename}"/>
-      </a>
-      <c:if test="${not empty plan.attachmentSize}"> — <small><c:out value="${plan.attachmentSize}"/> bytes</small></c:if>
-    </div>
+  <!-- usiamo action create_and_upload: se non viene inviato file, viene comunque creata la scheda -->
+  <input type="hidden" name="action" value="create_and_upload"/>
+  <c:if test="${plan != null}">
+    <input type="hidden" name="id" value="${plan.id}"/>
   </c:if>
 
-  <form method="post"
-        action="${pageContext.request.contextPath}/staff/plans/action"
-        enctype="multipart/form-data">
-    <%@ include file="/WEB-INF/views/fragments/csrf.jspf" %>
-    <input type="hidden" name="action" value="upload"/>
-    <input type="hidden" name="planId" value="${plan.id}"/>
+  <label>Titolo
+    <input type="text" name="title" value="${plan != null ? plan.title : ''}" required />
+  </label>
 
-    <label>Allega scheda (PDF / Excel):
-      <input type="file" name="attachment"
-             accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-    </label>
-    <button type="submit">Carica allegato</button>
-  </form>
+  <label>Descrizione
+    <textarea name="description" rows="3">${plan != null ? plan.description : ''}</textarea>
+  </label>
 
-  <p>
-    <a href="${pageContext.request.contextPath}/staff/plans">← Torna alle schede</a>
-  </p>
-</c:if>
+  <label>Contenuto
+    <textarea name="content" rows="8">${plan != null ? plan.content : ''}</textarea>
+  </label>
 
-<!-- Se la scheda non esiste, istruisco l'utente a salvarla prima -->
-<c:if test="${plan == null}">
-  <p>Per caricare un allegato devi prima salvare la scheda. Clicca <a href="${pageContext.request.contextPath}/staff/plans/form">qui</a> per creare la scheda, poi torna su questa pagina e carica l'allegato.</p>
+  <hr/>
+
+  <label>Allega scheda (opzionale — PDF/XLS/XLSX)
+    <input type="file" name="attachment" accept=".pdf,.xls,.xlsx" />
+  </label>
+
+  <div style="margin-top:12px;">
+    <button type="submit">Salva (e carica file se fornito)</button>
+    <a href="${pageContext.request.contextPath}/staff/plans" style="margin-left:12px;">Annulla</a>
+  </div>
+</form>
+
+<c:if test="${plan != null && not empty plan.attachmentFilename}">
+  <div class="attachment">
+    <strong>Allegato corrente:</strong>
+    <a href="${pageContext.request.contextPath}/staff/plans/download?id=${plan.id}" target="_blank">
+      <c:out value="${plan.attachmentFilename}"/>
+    </a>
+    <c:if test="${not empty plan.attachmentSize}"> — <small><c:out value="${plan.attachmentSize}"/> bytes</small></c:if>
+  </div>
 </c:if>
 
 </body>

@@ -17,7 +17,6 @@
 <h1>Schede di allenamento</h1>
 
 <p>
-  <!-- CORRETTO: punta al form per creare/modificare -->
   <a href="${pageContext.request.contextPath}/staff/plans/form">➕ Nuova scheda</a>
   &nbsp;|&nbsp;
   <a href="${pageContext.request.contextPath}/staff/home">← Torna</a>
@@ -50,13 +49,26 @@
             <td><c:out value="${p.title}"/></td>
             <td><c:out value="${p.createdBy}"/></td>
             <td class="small"><c:out value="${p.updatedAt}"/></td>
+
+            <!-- Colonna Allegato: mostra filename se presente, fallback su attachmentPath, altrimenti "Nessuno" -->
             <td>
-              <c:if test="${not empty p.attachmentFilename}">
-                <a href="${pageContext.request.contextPath}/staff/plans/download?id=${p.id}">
-                  <c:out value="${p.attachmentFilename}"/>
-                </a>
-              </c:if>
+              <c:choose>
+                <c:when test="${not empty p.attachmentFilename}">
+                  <a href="${pageContext.request.contextPath}/staff/plans/download?id=${p.id}">
+                    <c:out value="${p.attachmentFilename}"/>
+                  </a>
+                </c:when>
+                <c:when test="${not empty p.attachmentPath}">
+                  <a href="${pageContext.request.contextPath}/staff/plans/download?id=${p.id}">
+                    Scarica allegato
+                  </a>
+                </c:when>
+                <c:otherwise>
+                  <span class="small">Nessuno</span>
+                </c:otherwise>
+              </c:choose>
             </td>
+
             <td class="actions">
               <a href="${pageContext.request.contextPath}/staff/plans/form?id=${p.id}">Modifica</a>
               &nbsp;|&nbsp;
@@ -67,13 +79,12 @@
                 <button type="submit" onclick="return confirm('Confermi rimozione?')">Rimuovi</button>
               </form>
 
+
               &nbsp;|&nbsp;
-              <a href="${pageContext.request.contextPath}/staff/plans/form?id=${p.id}#upload">Carica allegato</a>
-              &nbsp;|&nbsp;
+
               
               <a href="${pageContext.request.contextPath}/staff/plans/assign?planId=${p.id}">Assegna</a>
-              &nbsp;|&nbsp;
-              <a href="${pageContext.request.contextPath}/staff/plans/history?id=${p.id}">Storico</a>
+           
             </td>
           </tr>
         </c:forEach>

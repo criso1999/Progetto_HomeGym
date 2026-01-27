@@ -16,6 +16,11 @@ import java.util.logging.Logger;
  * DAO per training_plan, training_plan_version, training_plan_assignment.
  * Aggiornato addAttachment con detection robusta della tabella training_plan_attachment
  * e logging dettagliato per facilitare il debug quando la tabella non viene popolata.
+ *
+ * Correzioni principali:
+ *  - listPlansByTrainer ora seleziona anche i campi attachment_* (prima venivano lasciati fuori,
+ *    causando valori null in mapPlan e quindi la JSP che mostrava "Nessuno").
+ *  - piccole migliorie al logging e gestione degli statement/rs.
  */
 public class TrainingPlanDAO {
 
@@ -191,7 +196,7 @@ public class TrainingPlanDAO {
     public int insertAttachment(int planId, String filename, String path, Long size, String contentType, Integer uploadedBy) throws SQLException {
         String sql = "INSERT INTO training_plan_attachment (plan_id, filename, path, content_type, size, uploaded_at, uploaded_by) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, planId);
             ps.setString(2, filename);
             ps.setString(3, path);
@@ -213,7 +218,7 @@ public class TrainingPlanDAO {
         List<TrainingPlanAttachment> out = new ArrayList<>();
         String sql = "SELECT id, plan_id, filename, path, content_type, size, uploaded_at, uploaded_by FROM training_plan_attachment WHERE plan_id = ? ORDER BY uploaded_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql)) {
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, planId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -237,7 +242,7 @@ public class TrainingPlanDAO {
     public TrainingPlanAttachment findLatestAttachmentForPlan(int planId) throws SQLException {
         String sql = "SELECT id, plan_id, filename, path, content_type, size, uploaded_at, uploaded_by FROM training_plan_attachment WHERE plan_id = ? ORDER BY uploaded_at DESC LIMIT 1";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql)) {
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, planId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -261,7 +266,7 @@ public class TrainingPlanDAO {
     public boolean deleteAttachmentById(int attachmentId) throws SQLException {
         String sql = "DELETE FROM training_plan_attachment WHERE id = ?";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = c.prepareStatement(sql)) {
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, attachmentId);
             return ps.executeUpdate() > 0;
         }
@@ -352,7 +357,10 @@ public class TrainingPlanDAO {
     // List plans created by a trainer
     public List<TrainingPlan> listPlansByTrainer(int trainerId) throws SQLException {
         List<TrainingPlan> out = new ArrayList<>();
-        String sql = "SELECT id, title, description, content, created_by, created_at, updated_at, deleted FROM training_plan WHERE created_by = ? AND (deleted = 0 OR deleted IS NULL) ORDER BY updated_at DESC";
+        // ADJUSTED: include attachment columns so mapPlan can populate them and JSP will show them
+        String sql = "SELECT id, title, description, content, created_by, created_at, updated_at, deleted, " +
+                     "attachment_filename, attachment_content_type, attachment_path, attachment_size " +
+                     "FROM training_plan WHERE created_by = ? AND (deleted = 0 OR deleted IS NULL) ORDER BY updated_at DESC";
         try (Connection c = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, trainerId);
