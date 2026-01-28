@@ -41,6 +41,8 @@
         <li><a href="<%=request.getContextPath()%>/staff/clients">Clienti</a></li>
         <li><a href="<%=request.getContextPath()%>/staff/sessions">Sessioni</a></li>
         <li><a href="<%=request.getContextPath()%>/staff/plans">Schede Allenamento</a></li>
+        <li><a href="<%=request.getContextPath()%>/staff/subscriptions">Gestione abbonamenti</a></li>
+        <li><a href="<%=request.getContextPath()%>/subscriptions">Lista piani abbonamento (pubblica)</a></li>
     </ul>
 </div>
 
@@ -61,7 +63,11 @@
 <!-- ===== ACCOUNT ===== -->
 <div class="section">
     <h3>Account</h3>
-    <p><a href="<%=request.getContextPath()%>/logout">Logout</a></p>
+    <ul>
+      <li><a href="<%=request.getContextPath()%>/staff/profile">Il mio profilo</a></li>
+      <li><a href="<%=request.getContextPath()%>/staff/subscriptions">Le sottoscrizioni utenti</a></li>
+      <li><a href="<%=request.getContextPath()%>/logout">Logout</a></li>
+    </ul>
 </div>
 
 </body>
