@@ -33,9 +33,11 @@ public class ClientProfileServlet extends HttpServlet {
         String port = System.getenv("MONGO_PORT");
         String dbName = System.getenv("MONGO_DB");
 
-        MongoClient client = MongoClients.create("mongodb://" + host + ":" + port);
-        MongoDatabase db = client.getDatabase(dbName);
-        posts = db.getCollection("posts");
+        if (host != null && port != null && dbName != null) {
+            MongoClient client = MongoClients.create("mongodb://" + host + ":" + port);
+            MongoDatabase db = client.getDatabase(dbName);
+            posts = db.getCollection("posts");
+        }
     }
 
     private HttpSession requireSession(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -57,12 +59,15 @@ public class ClientProfileServlet extends HttpServlet {
             Utente fresh = utenteDAO.findById(u.getId());
             if (fresh != null) u = fresh;
         } catch (Exception ignored) {}
-        List<Document> userPosts = posts
-                .find(new Document("userId", u.getId()))
-                .sort(new Document("createdAt", -1))
-                .into(new ArrayList<>());
+        List<Document> userPosts = new ArrayList<>();
+        if (posts != null) {
+            userPosts = posts
+                    .find(new Document("userId", u.getId()))
+                    .sort(new Document("createdAt", -1))
+                    .into(new ArrayList<>());
+        }
         req.setAttribute("user", u);
-         req.setAttribute("posts", userPosts);
+        req.setAttribute("posts", userPosts);
         req.getRequestDispatcher("/WEB-INF/views/client/profile.jsp").forward(req, resp);
     }
 
@@ -76,6 +81,8 @@ public class ClientProfileServlet extends HttpServlet {
         String nome = req.getParameter("nome");
         String cognome = req.getParameter("cognome");
         String email = req.getParameter("email");
+        String telefono = req.getParameter("telefono");
+        String bio = req.getParameter("bio");
         String newPwd = req.getParameter("password");
         String newPwd2 = req.getParameter("password2");
 
@@ -95,9 +102,13 @@ public class ClientProfileServlet extends HttpServlet {
             u.setNome(nome);
             u.setCognome(cognome);
             u.setEmail(email);
+            u.setTelefono(telefono);
+            u.setBio(bio);
+
             boolean ok = utenteDAO.update(u);
             if (!ok) {
                 req.setAttribute("error", "Errore aggiornamento profilo.");
+                req.setAttribute("user", u);
                 req.getRequestDispatcher("/WEB-INF/views/client/profile.jsp").forward(req, resp);
                 return;
             }
@@ -106,6 +117,7 @@ public class ClientProfileServlet extends HttpServlet {
             if (newPwd != null && !newPwd.isBlank()) {
                 if (!newPwd.equals(newPwd2)) {
                     req.setAttribute("error", "Le password non coincidono.");
+                    req.setAttribute("user", u);
                     req.getRequestDispatcher("/WEB-INF/views/client/profile.jsp").forward(req, resp);
                     return;
                 }
