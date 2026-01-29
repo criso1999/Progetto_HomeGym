@@ -21,7 +21,7 @@ public class UtenteDAO {
      */
     public List<Utente> listAll() throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
                      "FROM utente ORDER BY id DESC";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -36,7 +36,7 @@ public class UtenteDAO {
      */
     public List<Utente> listByRole(String ruolo) throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
                      "FROM utente " +
                      "WHERE ruolo = ? AND (deleted = 0 OR deleted IS NULL) " +
                      "ORDER BY id DESC";
@@ -53,7 +53,7 @@ public class UtenteDAO {
     // Ritorna i clienti assegnati al trainer, INCLUDENDO anche quelli soft-deleted
     public List<Utente> listClientsByTrainerIncludingDeleted(int trainerId) throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
                     "FROM utente " +
                     "WHERE trainer_id = ? " +
                     "ORDER BY id DESC";
@@ -96,7 +96,7 @@ public class UtenteDAO {
      */
     public List<Utente> listAvailableClientsForAssign() throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
                      "FROM utente " +
                      "WHERE (trainer_id IS NULL) AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) " +
                      "ORDER BY id DESC";
@@ -109,7 +109,7 @@ public class UtenteDAO {
     }
 
     public boolean update(Utente u) throws SQLException {
-        String sql = "UPDATE utente SET nome = ?, cognome = ?, email = ?, ruolo = ?, trainer_id = ? WHERE id = ?";
+        String sql = "UPDATE utente SET nome = ?, cognome = ?, email = ?, ruolo = ?, trainer_id = ?, telefono = ?, bio = ? WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, u.getNome());
@@ -117,7 +117,9 @@ public class UtenteDAO {
             ps.setString(3, u.getEmail());
             ps.setString(4, u.getRuolo());
             if (u.getTrainerId() != null) ps.setInt(5, u.getTrainerId()); else ps.setNull(5, Types.INTEGER);
-            ps.setInt(6, u.getId());
+            ps.setString(6, u.getTelefono());
+            ps.setString(7, u.getBio());
+            ps.setInt(8, u.getId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -142,7 +144,7 @@ public class UtenteDAO {
     }
 
     public Utente findById(int id) throws SQLException {
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, trainer_id, deleted, created_at FROM utente WHERE id = ?";
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, trainer_id, telefono, bio, deleted, created_at FROM utente WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -164,7 +166,7 @@ public class UtenteDAO {
     }
 
     public Utente findByEmail(String email) throws SQLException {
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, trainer_id, created_at, deleted FROM utente WHERE email = ?";
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, trainer_id, created_at, telefono, bio, deleted FROM utente WHERE email = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, email);
@@ -176,7 +178,7 @@ public class UtenteDAO {
     }
 
     public boolean create(Utente u) throws SQLException {
-        String sql = "INSERT INTO utente (nome, cognome, email, password, ruolo, trainer_id) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO utente (nome, cognome, email, password, ruolo, trainer_id, telefono, bio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -186,6 +188,8 @@ public class UtenteDAO {
             ps.setString(4, u.getPassword()); // deve essere già hashed
             ps.setString(5, u.getRuolo());
             if (u.getTrainerId() != null) ps.setInt(6, u.getTrainerId()); else ps.setNull(6, Types.INTEGER);
+            ps.setString(7, u.getTelefono());
+            ps.setString(8, u.getBio());
 
             int affected = ps.executeUpdate();
             if (affected == 0) return false;
@@ -228,12 +232,12 @@ public class UtenteDAO {
         }
     }
 
-        /**
+    /**
      * Ritorna i clienti (Utente) assegnati al trainer, escludendo quelli soft-deleted.
      */
     public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
         List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, deleted " +
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
                      "FROM utente " +
                      "WHERE trainer_id = ? AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) " +
                      "ORDER BY id DESC";
@@ -246,7 +250,6 @@ public class UtenteDAO {
         }
         return list;
     }
-
 
     // ---- helper ----
     private Utente mapRow(ResultSet rs) throws SQLException {
@@ -265,6 +268,18 @@ public class UtenteDAO {
         } catch (SQLException ignored) {
             u.setTrainerId(null);
         }
+
+        // telefono (nullable)
+        try {
+            String tel = rs.getString("telefono");
+            u.setTelefono(tel);
+        } catch (SQLException ignored) {}
+
+        // bio (nullable)
+        try {
+            String bio = rs.getString("bio");
+            u.setBio(bio);
+        } catch (SQLException ignored) {}
 
         // deleted (nullable)
         try {
