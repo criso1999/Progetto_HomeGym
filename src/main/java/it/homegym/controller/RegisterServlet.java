@@ -1,15 +1,22 @@
 package it.homegym.controller;
 
 import it.homegym.dao.UtenteDAO;
+import it.homegym.dao.VerificationTokenDAO;
 import it.homegym.model.Utente;
 import it.homegym.security.RecaptchaVerifier;
+import it.homegym.util.EmailSender;
 import org.mindrot.jbcrypt.BCrypt;
 
+import javax.mail.MessagingException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @WebServlet("/register")
 public class RegisterServlet extends HttpServlet {
@@ -44,6 +51,11 @@ public class RegisterServlet extends HttpServlet {
         if (email == null) return false;
         // semplice validazione lato server, non esaustiva
         return email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    }
+
+    private String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     @Override
@@ -119,7 +131,56 @@ public class RegisterServlet extends HttpServlet {
                 req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
                 return;
             }
-            resp.sendRedirect(req.getContextPath() + "/login");
+
+            // --- crea token di verifica e invia email ---
+            VerificationTokenDAO tokenDao = new VerificationTokenDAO();
+            String token = java.util.UUID.randomUUID().toString();
+
+            // scadenza 24 ore
+            LocalDateTime exp = LocalDateTime.now().plusHours(24);
+            Timestamp expiresAt = Timestamp.valueOf(exp);
+
+            int tokenId = tokenDao.createToken(u.getId(), token, expiresAt);
+            if (tokenId <= 0) {
+                // se non riusciamo a salvare il token, informiamo
+                req.setAttribute("error", "Impossibile generare token di verifica. Contatta l'amministratore.");
+                req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
+                req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
+                return;
+            }
+
+            // costruisci URL verifica
+            String scheme = req.getScheme(); // http/https
+            String host = req.getServerName();
+            int port = req.getServerPort();
+            String context = req.getContextPath();
+            String portPart = (port == 80 || port == 443) ? "" : ":" + port;
+            String verifyUrl = scheme + "://" + host + portPart + context + "/verify-email?token=" +
+                    URLEncoder.encode(token, StandardCharsets.UTF_8.name());
+
+            String subject = "Verifica la tua email - HomeGym";
+            String html = "<p>Ciao " + escapeHtml(u.getNome()) + ",</p>"
+                    + "<p>Grazie per esserti registrato su HomeGym. Per completare la registrazione clicca il link sottostante:</p>"
+                    + "<p><a href=\"" + verifyUrl + "\">Verifica la mia email</a></p>"
+                    + "<p>Il link scadrà tra 24 ore.</p>"
+                    + "<p>Se non hai effettuato questa richiesta ignora questa mail.</p>";
+
+            try {
+                EmailSender.sendVerificationEmail(u.getEmail(), subject, html);
+            } catch (MessagingException | RuntimeException e) {
+                e.printStackTrace();
+                // opzionale: cancellare token o utente, qui semplicemente informiamo l'utente
+                req.setAttribute("error", "Errore invio email di verifica. Contatta l'amministratore.");
+                req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
+                req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
+                return;
+            }
+
+            // successo: mostra messaggio istruttivo
+            req.setAttribute("info", "Registrazione completata. Controlla la tua email per il link di verifica.");
+            req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
+            req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
+
         } catch (SQLIntegrityConstraintViolationException sqlEx) {
             // se un altro processo ha creato la stessa email contestualmente
             req.setAttribute("error", "Esiste già un account con questa email.");

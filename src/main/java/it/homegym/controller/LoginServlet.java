@@ -9,6 +9,9 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -85,6 +88,32 @@ public class LoginServlet extends HttpServlet {
                 req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
                 req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);
                 return;
+            }
+
+            // blocco se utente soft-deleted
+            if (u.getDeleted() != null && u.getDeleted()) {
+                req.setAttribute("error", "Account disattivato. Contatta l'amministratore.");
+                req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
+                req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);
+                return;
+            }
+
+            // controllo email verificata (richiede UtenteDAO.isEmailVerified)
+            try {
+                boolean verified = dao.isEmailVerified(u.getId()); // implementa questo metodo nel DAO
+                if (!verified) {
+                    // prepara link per richiedere reinvio token
+                    String resend = req.getContextPath() + "/resend-verification?email=" +
+                            URLEncoder.encode(email, StandardCharsets.UTF_8.name());
+                    String msg = "Account non verificato. Controlla la tua email per il link di verifica oppure " +
+                            "<a href=\"" + resend + "\">invia di nuovo il link</a>.";
+                    req.setAttribute("errorHtml", msg); // usa un campo html-safe nella JSP (o escape se preferisci)
+                    req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
+                    req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);
+                    return;
+                }
+            } catch (SQLException sqle) {
+                throw new ServletException("Errore controllo stato verifica email", sqle);
             }
 
             HttpSession session = req.getSession(true);

@@ -232,6 +232,33 @@ public class UtenteDAO {
         }
     }
 
+    // Imposta il flag email_verified
+    public boolean setEmailVerified(int userId) throws SQLException {
+        String sql = "UPDATE utente SET email_verified = 1, email_verified_at = CURRENT_TIMESTAMP WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // Controlla se l'email dell'utente è verificata
+    public boolean isEmailVerified(int userId) throws SQLException {
+        String sql = "SELECT email_verified FROM utente WHERE id = ?";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("email_verified");
+                }
+            }
+        }
+        return false;
+    }
+
+
+
     /**
      * Ritorna i clienti (Utente) assegnati al trainer, escludendo quelli soft-deleted.
      */
@@ -294,6 +321,12 @@ public class UtenteDAO {
             Timestamp ts = rs.getTimestamp("created_at");
             if (ts != null) u.setCreatedAt(new Date(ts.getTime()));
         } catch (SQLException ignored) {}
+
+        // email_verified (nullable)
+        try {
+        boolean ev = rs.getBoolean("email_verified");
+        if (!rs.wasNull()) u.setEmailVerified(ev);
+    } catch (SQLException ignored) { u.setEmailVerified(false); }
 
         return u;
     }

@@ -36,6 +36,9 @@ public class Utente {
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
 
+    @Column(name = "email_verified", nullable = false)
+    private Boolean emailVerified = false;
+
     public Utente() {}
 
     // getter & setter
@@ -74,7 +77,13 @@ public class Utente {
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
-
+    
+    public Boolean getEmailVerified() {
+        return emailVerified != null ? emailVerified : Boolean.FALSE;
+    }
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
     @Override
     public String toString() {
         return "Utente{" +
@@ -87,9 +96,10 @@ public class Utente {
                 ", telefono=" + telefono +
                 ", deleted=" + deleted +
                 ", createdAt=" + createdAt +
+                ", emailVerified=" + emailVerified +
                 '}';
     }
-
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

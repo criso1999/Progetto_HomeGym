@@ -41,7 +41,6 @@
         <li><a href="<%=request.getContextPath()%>/staff/clients">Clienti</a></li>
         <li><a href="<%=request.getContextPath()%>/staff/sessions">Sessioni</a></li>
         <li><a href="<%=request.getContextPath()%>/staff/plans">Schede Allenamento</a></li>
-        <li><a href="<%=request.getContextPath()%>/staff/subscriptions">Gestione abbonamenti</a></li>
         <li><a href="<%=request.getContextPath()%>/subscriptions">Lista piani abbonamento (pubblica)</a></li>
     </ul>
 </div>
