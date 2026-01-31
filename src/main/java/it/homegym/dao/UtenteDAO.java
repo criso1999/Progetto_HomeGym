@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class UtenteDAO {
 
@@ -83,6 +84,25 @@ public class UtenteDAO {
         return out;
     }
 
+      /**
+     * Ritorna i clienti (Utente) assegnati al trainer, escludendo quelli soft-deleted.
+     */
+    public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
+        List<Utente> list = new ArrayList<>();
+        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
+                     "FROM utente " +
+                     "WHERE trainer_id = ? AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) " +
+                     "ORDER BY id DESC";
+        try (Connection con = ConnectionPool.getDataSource().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, trainerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        }
+        return list;
+    }
+
     /**
      * Alias compatibilità: alcuni servlet chiamano listClient(...)
      * -> ritorna list di id per compatibilità col codice esistente.
@@ -108,6 +128,7 @@ public class UtenteDAO {
         return list;
     }
 
+    // Aggiorna i dati di un utente
     public boolean update(Utente u) throws SQLException {
         String sql = "UPDATE utente SET nome = ?, cognome = ?, email = ?, ruolo = ?, trainer_id = ?, telefono = ?, bio = ? WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
@@ -124,6 +145,7 @@ public class UtenteDAO {
         }
     }
 
+    // Aggiorna il ruolo di un utente
     public boolean updateRole(int id, String newRole) throws SQLException {
         String sql = "UPDATE utente SET ruolo = ? WHERE id = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
@@ -165,6 +187,7 @@ public class UtenteDAO {
         }
     }
 
+    // Trova utente per email
     public Utente findByEmail(String email) throws SQLException {
         String sql = "SELECT id, nome, cognome, email, password, ruolo, trainer_id, created_at, telefono, bio, deleted FROM utente WHERE email = ?";
         try (Connection con = ConnectionPool.getDataSource().getConnection();
@@ -233,50 +256,114 @@ public class UtenteDAO {
     }
 
     // Imposta il flag email_verified
+    // inside it.homegym.dao.UtenteDAO (importa java.util.logging.Logger)
+    private static final Logger LOG = Logger.getLogger(UtenteDAO.class.getName());
+
+   
     public boolean setEmailVerified(int userId) throws SQLException {
-        String sql = "UPDATE utente SET email_verified = 1, email_verified_at = CURRENT_TIMESTAMP WHERE id = ?";
-        try (Connection con = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            return ps.executeUpdate() > 0;
+    String sql = "UPDATE utente SET email_verified = 1, email_verified_at = CURRENT_TIMESTAMP WHERE id = ?";
+    try (Connection con = ConnectionPool.getDataSource().getConnection();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+
+        // LOG diagnostica connessione
+        try {
+            java.sql.DatabaseMetaData md = con.getMetaData();
+            LOG.info("setEmailVerified: connected to DB url=" + md.getURL() + " user=" + md.getUserName() + " autoCommit=" + con.getAutoCommit());
+        } catch (SQLException ignore) {}
+
+        ps.setInt(1, userId);
+        int updated = ps.executeUpdate();
+        LOG.info("setEmailVerified: userId=" + userId + " updatedRows=" + updated);
+
+        if (!con.getAutoCommit()) {
+            try {
+                con.commit();
+                LOG.info("setEmailVerified: commit eseguito");
+            } catch (SQLException ce) {
+                LOG.warning("setEmailVerified: commit fallito: " + ce.getMessage());
+                throw ce;
+            }
+        }
+        return updated > 0;
+    }
+}
+
+  // Controlla se l'email dell'utente è verificata
+public boolean isEmailVerified(int userId) throws SQLException {
+    String sql = "SELECT email_verified FROM utente WHERE id = ?";
+    try (Connection con = ConnectionPool.getDataSource().getConnection();
+        PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, userId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getBoolean("email_verified");
+            }
         }
     }
+    return false;
+}
 
-    // Controlla se l'email dell'utente è verificata
-    public boolean isEmailVerified(int userId) throws SQLException {
-        String sql = "SELECT email_verified FROM utente WHERE id = ?";
-        try (Connection con = ConnectionPool.getDataSource().getConnection();
-            PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getBoolean("email_verified");
+// === EMAIL VERIFICATION VIA TOKEN STRING (TRANSACTIONAL) ===
+public boolean verifyUserWithTokenString(String token) throws SQLException {
+    String selectToken = "SELECT user_id, expires_at FROM verification_token WHERE token = ? FOR UPDATE";
+    String updateUser = "UPDATE utente SET email_verified = 1, email_verified_at = CURRENT_TIMESTAMP WHERE id = ?";
+    String deleteToken = "DELETE FROM verification_token WHERE token = ?";
+
+    try (Connection con = ConnectionPool.getDataSource().getConnection()) {
+        boolean previousAutoCommit = con.getAutoCommit();
+
+        try {
+            con.setAutoCommit(false);
+
+            try (PreparedStatement psSel = con.prepareStatement(selectToken)) {
+                psSel.setString(1, token);
+
+                try (ResultSet rs = psSel.executeQuery()) {
+                    if (!rs.next()) {
+                        con.rollback();
+                        return false;
+                    }
+
+                    int userId = rs.getInt("user_id");
+                    Timestamp expiresAt = rs.getTimestamp("expires_at");
+
+                    if (expiresAt != null && expiresAt.toInstant().isBefore(java.time.Instant.now())) {
+                        try (PreparedStatement psDelExpired = con.prepareStatement(deleteToken)) {
+                            psDelExpired.setString(1, token);
+                            psDelExpired.executeUpdate();
+                        }
+                        con.commit();
+                        return false;
+                    }
+
+                    try (PreparedStatement psUpd = con.prepareStatement(updateUser)) {
+                        psUpd.setInt(1, userId);
+                        int updated = psUpd.executeUpdate();
+                        if (updated == 0) {
+                            con.rollback();
+                            return false;
+                        }
+                    }
+
+                    try (PreparedStatement psDel = con.prepareStatement(deleteToken)) {
+                        psDel.setString(1, token);
+                        psDel.executeUpdate();
+                    }
+
+                    con.commit();
+                    return true;
                 }
             }
+
+        } catch (SQLException ex) {
+            try { con.rollback(); } catch (SQLException ignored) {}
+            throw ex;
+        } finally {
+            try { con.setAutoCommit(previousAutoCommit); } catch (SQLException ignored) {}
         }
-        return false;
     }
+}
 
-
-
-    /**
-     * Ritorna i clienti (Utente) assegnati al trainer, escludendo quelli soft-deleted.
-     */
-    public List<Utente> listClientsByTrainer(int trainerId) throws SQLException {
-        List<Utente> list = new ArrayList<>();
-        String sql = "SELECT id, nome, cognome, email, password, ruolo, created_at, trainer_id, telefono, bio, deleted " +
-                     "FROM utente " +
-                     "WHERE trainer_id = ? AND ruolo = 'CLIENTE' AND (deleted = 0 OR deleted IS NULL) " +
-                     "ORDER BY id DESC";
-        try (Connection con = ConnectionPool.getDataSource().getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, trainerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapRow(rs));
-            }
-        }
-        return list;
-    }
 
     // ---- helper ----
     private Utente mapRow(ResultSet rs) throws SQLException {

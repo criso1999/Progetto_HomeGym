@@ -10,55 +10,46 @@ import javax.servlet.http.*;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @WebServlet("/verify-email")
 public class VerifyEmailServlet extends HttpServlet {
+    
 
     private VerificationTokenDAO tokenDao;
     private UtenteDAO utenteDao;
 
-    @Override
-    public void init() throws ServletException {
-        tokenDao = new VerificationTokenDAO();
-        utenteDao = new UtenteDAO();
-    }
+        @Override
+        public void init() throws ServletException {
+            tokenDao = new VerificationTokenDAO();
+            utenteDao = new UtenteDAO();
+        }
+
+       private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(VerifyEmailServlet.class.getName());
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String token = req.getParameter("token");
-        if (token == null || token.isBlank()) {
-            req.getSession().setAttribute("flashError", "Token mancante.");
-            resp.sendRedirect(req.getContextPath() + "/login");
-            return;
-        }
+        System.out.println("Received token: " + token);
         try {
-            TokenRecord ti = tokenDao.findByToken(token);
-            if (ti == null) {
+            LOG.info("VerifyEmailServlet: called with token=" + token);
+
+            boolean ok = tokenDao.verifyAndConsumeToken(token);
+            LOG.info("VerifyEmailServlet: verifyAndConsumeToken returned " + ok + " for token=" + token);
+
+            if (!ok) {
                 req.getSession().setAttribute("flashError", "Token non valido o già usato.");
                 resp.sendRedirect(req.getContextPath() + "/login");
                 return;
             }
-            if (ti.expiresAt != null && ti.expiresAt.toInstant().isBefore(Instant.now())) {
-                // opzionale: cancella token scaduto
-                tokenDao.deleteById(ti.id);
-                req.getSession().setAttribute("flashError", "Token scaduto. Richiedi nuovo link.");
-                resp.sendRedirect(req.getContextPath() + "/login");
-                return;
-            }
-
-            boolean ok = utenteDao.setEmailVerified(ti.userId);
-            if (!ok) {
-                req.getSession().setAttribute("flashError", "Impossibile verificare l'account. Contatta admin.");
-                resp.sendRedirect(req.getContextPath() + "/login");
-                return;
-            }
-            // cancella il token (one-time use)
-            tokenDao.deleteById(ti.id);
 
             req.getSession().setAttribute("flashSuccess", "Email verificata correttamente. Ora puoi effettuare il login.");
             resp.sendRedirect(req.getContextPath() + "/login");
         } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "VerifyEmailServlet: SQLException verifying token=" + token, e);
             throw new ServletException("Errore DB verifica email", e);
         }
     }
+
 }

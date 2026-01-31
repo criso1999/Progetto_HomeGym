@@ -22,6 +22,7 @@ public class AuthFilter implements Filter {
                 || path.equals("/login") || path.equals("/register")
                 || path.equals("/forgot")
                 || path.startsWith("/reset")
+                || path.equals("/verify-email")
                 || path.equals("/jnditest") || path.equals("/test") || path.equals("/logout")) 
                 {
             chain.doFilter(req, res);

@@ -48,6 +48,7 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TrainerEvaluationServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TrainerPlanFormServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/TrainingPlanActionServlet.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/controller/VerifyEmailServlet.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/MediaDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PasswordResetDAO.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/dao/PaymentDAO.java
@@ -76,6 +77,7 @@
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/model/TrainingPlanVersion.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/model/TrainingSession.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/model/Utente.java
+/mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/model/VerificationToken.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/security/CsrfUtil.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/security/RateLimitService.java
 /mnt/c/Users/Utente/Desktop/project/Progetto_HomeGym/src/main/java/it/homegym/security/RateLimiter.java

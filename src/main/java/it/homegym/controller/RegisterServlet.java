@@ -21,8 +21,10 @@ import java.time.LocalDateTime;
 @WebServlet("/register")
 public class RegisterServlet extends HttpServlet {
 
+
     private UtenteDAO dao;
 
+    // Inizializza il DAO
     @Override
     public void init() throws ServletException {
         super.init();
@@ -33,6 +35,7 @@ public class RegisterServlet extends HttpServlet {
         }
     }
 
+    // Gestione della richiesta GET (mostra il form di registrazione)
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.setAttribute("recaptchaSiteKey", System.getenv("RECAPTCHA_SITE_KEY"));
@@ -53,11 +56,13 @@ public class RegisterServlet extends HttpServlet {
         return email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
 
+    // Escape HTML per prevenire XSS nelle email
     private String escapeHtml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
+    // Gestione della richiesta POST (elabora il form di registrazione)
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String nome = req.getParameter("nome");
@@ -148,6 +153,7 @@ public class RegisterServlet extends HttpServlet {
                 req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
                 return;
             }
+            
 
             // costruisci URL verifica
             String scheme = req.getScheme(); // http/https
